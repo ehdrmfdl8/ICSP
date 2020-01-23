@@ -15,32 +15,36 @@ const long YSize = Width * Height;
 const long MPM_BUF_Size = 1584;
 const long USize = Width * Height * 1 / 4;
 const long VSize = Width * Height * 1 / 4;
-const int QP_DC = 8;//2~32
-const int QP_AC = 16;//2~64
+const int QP_DC = 1;//2~32
+const int QP_AC = 1;//2~64
 const int intra_period = 5; //0~31
 //인트라
-int** Intra_Mode0(unsigned char matrix[8][8], int, unsigned char*, unsigned char*);
-int** Intra_Mode1(unsigned char matrix[8][8], int, unsigned char*, unsigned char*);
-int** Intra_Mode2(unsigned char matrix[8][8], int, unsigned char*, unsigned char*);
-unsigned char* Intra_Prediction(unsigned char*, int, unsigned char*);
+int** Intra_Mode0(int matrix[8][8], int, int*, int*);
+int** Intra_Mode1(int matrix[8][8], int, int*, int*);
+int** Intra_Mode2(int matrix[8][8], int, int*, int*);
+int* Intra_Prediction(unsigned char*, int, unsigned char*);
 
 //역 인트라
-unsigned char** Reverse_Intra_Mode0(unsigned char matrix[8][8], int, unsigned char*, unsigned char*);
-unsigned char** Reverse_Intra_Mode1(unsigned char matrix[8][8], int, unsigned char*, unsigned char*);
-unsigned char** Reverse_Intra_Mode2(unsigned char matrix[8][8], int, unsigned char*, unsigned char*);
-unsigned char* Reverse_Intra_Prediction(unsigned char*, int, unsigned char*);
+int** Reverse_Intra_Mode0(int matrix[8][8], int, int*, int*);
+int** Reverse_Intra_Mode1(int matrix[8][8], int, int*, int*);
+int** Reverse_Intra_Mode2(int matrix[8][8], int, int*, int*);
+unsigned char* Reverse_Intra_Prediction(int*, int, unsigned char*);
 
 //pixel DPCM
-int** DPCM_Mode0(unsigned char matrix[8][8], int, unsigned char*, unsigned char*);
-int** DPCM_Mode0(unsigned char matrix[8][8], int, unsigned char*, unsigned char*);
-int** DPCM_Mode0(unsigned char matrix[8][8], int, unsigned char*, unsigned char*);
-unsigned char* pixel_DPCM(unsigned char*, int);
+int** DPCM_Mode0(int matrix[8][8], int, int*, int*);
+int** DPCM_Mode1(int matrix[8][8], int, int*, int*);
+int** DPCM_Mode2(int matrix[8][8], int, int*, int*);
+int* pixel_DPCM(int*, int);
 
 //역 pixel DPCM
-unsigned char** Reverse_DPCM_Mode0(unsigned char matrix[8][8], int, unsigned char*, unsigned char*);
-unsigned char** Reverse_DPCM_Mode1(unsigned char matrix[8][8], int, unsigned char*, unsigned char*);
-unsigned char** Reverse_DPCM_Mode2(unsigned char matrix[8][8], int, unsigned char*, unsigned char*);
-unsigned char* Reverse_pixel_DPCM(unsigned char*, int);
+int** Reverse_DPCM_Mode0(int matrix[8][8], int, int*, int*);
+int** Reverse_DPCM_Mode1(int matrix[8][8], int, int*, int*);
+int** Reverse_DPCM_Mode2(int matrix[8][8], int, int*, int*);
+int* Reverse_pixel_DPCM(int*, int);
+//인터
+int* Motion_Estimation(unsigned char* , unsigned char* , unsigned char* , unsigned char* );
+//역 인터
+unsigned char* Reverse_Motion_Estimation(int* , unsigned char* , unsigned char* , unsigned char* );
 
 //양자화
 int** Quantization(double**);
@@ -55,8 +59,8 @@ int** DPCM_Mode1(int matrix[36][44]);
 int* Reordering_entorpy(int*, int*);
 int** ZigZag_Scan(int matrix[8][8]);
 
-int* DCT_QUANTI(unsigned char*);
-unsigned char* IDCT_DEQUANTI(int*);
+int* DCT_QUANTI(int*);
+int* IDCT_DEQUANTI(int*);
 //엔트로피
 int* entropy_encoding(int**, int*, int*);
 
@@ -112,7 +116,11 @@ int* DC_DPCM(int* buffer) {
 		matrix[n][m] = buffer[Width * (8 * n) + 8 * m];
 	}
 	MODE1_matrix = DPCM_Mode1(matrix);
-	new_buffer = buffer;
+	for (int i = 0; i < YSize; i++)
+	{
+		new_buffer[i] = buffer[i];
+	}
+	//new_buffer = buffer;
 	for (int n = 0; n < 36; n++)
 	{
 		for (int m = 0; m < 44; m++)
@@ -385,7 +393,7 @@ int** BDCT(int** matrix) {
 	//=========================== end ====================================================
 	return IDCT3;
 }
-int* DCT_QUANTI(unsigned char* buffer)
+int* DCT_QUANTI(int* buffer)
 {
 	int* new_buffer = new int[YSize];
 	double matrix[8][8] = { 0, };
@@ -416,16 +424,31 @@ int* DCT_QUANTI(unsigned char* buffer)
 			for (int j = 0; j < 8; j++)
 			{
 				matrix[i][j] = (double)buffer[Width * (i + 8 * n) + j + 8 * m];
+				//if (k == 1580) {
+				//	printf("%f ", matrix[i][j]);
+				//}
 			}
+			//printf("\n");
 		}
+		//printf("\n");
 		DCT = FDCT(matrix);
+		//for (int i = 0; i < 8; i++)
+		//{
+		//	for (int j = 0; j < 8; j++)
+		//	{
+		//		//printf("%f ", DCT[i][j]);
+		//	}
+		//	//printf("\n");
+		//}
 		Quanti = Quantization(DCT);
 		for (int i = 0; i < 8; i++)
 		{
 			for (int j = 0; j < 8; j++)
 			{
 				new_buffer[Width * (i + 8 * n) + j + 8 * m] = Quanti[i][j];
+				//printf("%d ", Quanti[i][j]);
 			}
+			//printf("\n");
 		}
 		for (int i = 0; i < 8; i++)
 			delete[] DCT[i];
@@ -437,9 +460,9 @@ int* DCT_QUANTI(unsigned char* buffer)
 	return new_buffer;
 }
 
-unsigned char* IDCT_DEQUANTI(int* buffer)
+int* IDCT_DEQUANTI(int* buffer)
 {
-	unsigned char* new_buffer = new unsigned char[YSize];
+	int* new_buffer = new int[YSize];
 	int matrix[8][8] = { 0, };
 	int** IDCT = new int* [8];
 	for (int i = 0; i < 8; i++)
@@ -469,18 +492,33 @@ unsigned char* IDCT_DEQUANTI(int* buffer)
 			for (int j = 0; j < 8; j++)
 			{
 				matrix[i][j] = buffer[Width * (i + 8 * n) + j + 8 * m];
+				//printf("%d ", matrix[i][j]);
 			}
+			//printf("\n");
 		}
 		DeQuanti = DeQuantization(matrix);
+		//for (int i = 0; i < 8; i++)
+		//{
+		//	for (int j = 0; j < 8; j++)
+		//	{
+		//		//printf("%d ", DeQuanti[i][j]);
+		//	}
+		//	//printf("\n");
+		//}
 		IDCT = BDCT(DeQuanti);
 
 		for (int i = 0; i < 8; i++)
 		{
 			for (int j = 0; j < 8; j++)
 			{
-				new_buffer[Width * (i + 8 * n) + j + 8 * m] = (unsigned char)IDCT[i][j];
+				new_buffer[Width * (i + 8 * n) + j + 8 * m] = IDCT[i][j];
+				/*if (k == 1580) {
+					printf("%d ", new_buffer[Width * (i + 8 * n) + j + 8 * m]); 
+				}*/
 			}
+			//printf("\n");
 		}
+		//printf("\n");
 		for (int i = 0; i < 8; i++)
 			delete[] IDCT[i];
 		delete[] IDCT;
@@ -491,7 +529,7 @@ unsigned char* IDCT_DEQUANTI(int* buffer)
 	return new_buffer;
 }
 
-int** DPCM_Mode0(unsigned char matrix[8][8], int k, unsigned char* V_ref, unsigned char* H_ref) {
+int** DPCM_Mode0(int matrix[8][8], int k, int* V_ref, int* H_ref) {
 	int** MODE0_matrix = new int* [8];
 	for (int i = 0; i < 8; i++)
 	{
@@ -570,7 +608,7 @@ int** DPCM_Mode0(unsigned char matrix[8][8], int k, unsigned char* V_ref, unsign
 	return MODE0_matrix;
 }
 
-int** DPCM_Mode1(unsigned char matrix[8][8], int k, unsigned char* V_ref, unsigned char* H_ref) {
+int** DPCM_Mode1(int matrix[8][8], int k, int* V_ref, int* H_ref) {
 	int** MODE1_matrix = new int* [8];
 	for (int i = 0; i < 8; i++)
 	{
@@ -609,7 +647,7 @@ int** DPCM_Mode1(unsigned char matrix[8][8], int k, unsigned char* V_ref, unsign
 	return MODE1_matrix;
 }
 
-int** DPCM_Mode2(unsigned char matrix[8][8], int k, unsigned char* V_ref, unsigned char* H_ref) {
+int** DPCM_Mode2(int matrix[8][8], int k, int* V_ref, int* H_ref) {
 	int** MODE2_matrix = new int* [8];
 	for (int i = 0; i < 8; i++)
 	{
@@ -648,21 +686,21 @@ int** DPCM_Mode2(unsigned char matrix[8][8], int k, unsigned char* V_ref, unsign
 	return MODE2_matrix;
 }
 
-unsigned char* pixel_DPCM(unsigned char* buffer, int f) {
-	unsigned char* new_buffer = new unsigned char[YSize];
-	unsigned char* V_reference_buffer = new unsigned char[Width];
-	unsigned char* H_reference_buffer = new unsigned char[Width];
-	unsigned char matrix[8][8] = { 0, };
-	//int** MODE0_matrix = new int* [8];
-	//for (int i = 0; i < 8; i++)
-	//{
-	//	MODE0_matrix[i] = new int[8];
-	//}
-	int** MODE1_matrix = new int* [8];
+int* pixel_DPCM(int* buffer, int f) {
+	int* new_buffer = new int[YSize];
+	int* V_reference_buffer = new int[Width];
+	int* H_reference_buffer = new int[Width];
+	int matrix[8][8] = { 0, };
+	int** MODE0_matrix = new int* [8];
+	for (int i = 0; i < 8; i++)
+	{
+		MODE0_matrix[i] = new int[8];
+	}
+	/*int** MODE1_matrix = new int* [8];
 	for (int i = 0; i < 8; i++)
 	{
 		MODE1_matrix[i] = new int[8];
-	}
+	}*/
 	//int** MODE2_matrix = new int* [8];
 	//for (int i = 0; i < 8; i++)
 	//{
@@ -688,16 +726,16 @@ unsigned char* pixel_DPCM(unsigned char* buffer, int f) {
 			}
 		}
 
-		//MODE0_matrix = DPCM_Mode0(matrix, k, V_reference_buffer, H_reference_buffer);
-		MODE1_matrix = DPCM_Mode1(matrix, k, V_reference_buffer, H_reference_buffer);
+		MODE0_matrix = DPCM_Mode0(matrix, k, V_reference_buffer, H_reference_buffer);
+		//MODE1_matrix = DPCM_Mode1(matrix, k, V_reference_buffer, H_reference_buffer);
 		//MODE2_matrix = DPCM_Mode2(matrix, k, V_reference_buffer, H_reference_buffer);
 		for (int i = 0; i < 8; i++)
 		{
 			for (int j = 0; j < 8; j++)
 			{
-				//new_buffer[Width * (i + 8 * n) + j + 8 * m] = (unsigned char)MODE0_matrix[i][j];
-				new_buffer[Width * (i + 8 * n) + j + 8 * m] = (unsigned char)MODE1_matrix[i][j];
-				//new_buffer[Width * (i + 8 * n) + j + 8 * m] = (unsigned char)MODE2_matrix[i][j];
+				new_buffer[Width * (i + 8 * n) + j + 8 * m] = MODE0_matrix[i][j];
+				//new_buffer[Width * (i + 8 * n) + j + 8 * m] = MODE1_matrix[i][j];
+				//new_buffer[Width * (i + 8 * n) + j + 8 * m] = MODE2_matrix[i][j];
 			}
 		}
 
@@ -707,12 +745,12 @@ unsigned char* pixel_DPCM(unsigned char* buffer, int f) {
 			V_reference_buffer[r + 8 * m] = matrix[r][7];
 			H_reference_buffer[r + 8 * m] = matrix[7][r];
 		}
-		/*for (int i = 0; i < 8; i++)
-			delete[] MODE0_matrix[i];
-		delete[] MODE0_matrix;*/
 		for (int i = 0; i < 8; i++)
+			delete[] MODE0_matrix[i];
+		delete[] MODE0_matrix;
+		/*for (int i = 0; i < 8; i++)
 			delete[] MODE1_matrix[i];
-		delete[] MODE1_matrix;
+		delete[] MODE1_matrix;*/
 		/*for (int i = 0; i < 8; i++)
 			delete[] MODE2_matrix[i];
 		delete[] MODE2_matrix;*/
@@ -720,7 +758,7 @@ unsigned char* pixel_DPCM(unsigned char* buffer, int f) {
 	return new_buffer;
 }
 
-int** Intra_Mode0(unsigned char matrix[8][8], int k, unsigned char* V_ref, unsigned char* H_ref) {
+int** Intra_Mode0(int matrix[8][8], int k, int* V_ref, int* H_ref) {
 	int** MODE0_matrix = new int* [8];
 	for (int i = 0; i < 8; i++)
 	{
@@ -741,7 +779,7 @@ int** Intra_Mode0(unsigned char matrix[8][8], int k, unsigned char* V_ref, unsig
 		mean = 0;
 		for (int m = 0; m < 8; m++)
 		{
-			mean = V_ref[8 * ((k % 44) - 1) + m] + 128;
+			mean += V_ref[8 * ((k % 44) - 1) + m] + 128;
 		}
 		for (int i = 0; i < 8; i++)
 		{
@@ -754,7 +792,7 @@ int** Intra_Mode0(unsigned char matrix[8][8], int k, unsigned char* V_ref, unsig
 	else if (k % 44 == 0) {//1번째 열의 블록 수행
 		mean = 0;
 		for (int m = 0; m < 8; m++) {
-			mean = H_ref[8 * (k % 44) + m] + 128;
+			mean += H_ref[8 * (k % 44) + m] + 128;
 		}
 		for (int i = 0; i < 8; i++)
 		{
@@ -768,7 +806,7 @@ int** Intra_Mode0(unsigned char matrix[8][8], int k, unsigned char* V_ref, unsig
 		mean = 0;
 		for (int m = 0; m < 8; m++)
 		{
-			mean = H_ref[8 * (k % 44) + m] + V_ref[8 * ((k % 44) - 1) + m];
+			mean += H_ref[8 * (k % 44) + m] + V_ref[8 * ((k % 44) - 1) + m];
 		}
 		for (int i = 0; i < 8; i++)
 		{
@@ -781,7 +819,7 @@ int** Intra_Mode0(unsigned char matrix[8][8], int k, unsigned char* V_ref, unsig
 	return MODE0_matrix;
 }
 
-int** Intra_Mode1(unsigned char matrix[8][8], int k, unsigned char* V_ref, unsigned char* H_ref) {
+int** Intra_Mode1(int matrix[8][8], int k, int* V_ref, int* H_ref) {
 	int** MODE1_matrix = new int* [8];
 	for (int i = 0; i < 8; i++)
 	{
@@ -809,7 +847,7 @@ int** Intra_Mode1(unsigned char matrix[8][8], int k, unsigned char* V_ref, unsig
 	return MODE1_matrix;
 }
 
-int** Intra_Mode2(unsigned char matrix[8][8], int k, unsigned char* V_ref, unsigned char* H_ref) {
+int** Intra_Mode2(int matrix[8][8], int k, int* V_ref, int* H_ref) {
 	int** MODE2_matrix = new int* [8];
 	for (int i = 0; i < 8; i++)
 	{
@@ -836,12 +874,12 @@ int** Intra_Mode2(unsigned char matrix[8][8], int k, unsigned char* V_ref, unsig
 	}
 	return MODE2_matrix;
 }
-unsigned char* Intra_Prediction(unsigned char* buffer, int f, unsigned char* MPM_buffer) {
-	unsigned char* new_buffer = new unsigned char[YSize];
+int* Intra_Prediction(unsigned char* buffer, int f, unsigned char* MPM_buffer) {
+	int* new_buffer = new int[YSize];
 	//unsigned char* IncludeMPM_buffer = new unsigned char[YSize + MPM_BUF_Size];
-	unsigned char* V_reference_buffer = new unsigned char[Width];
-	unsigned char* H_reference_buffer = new unsigned char[Width];
-	unsigned char matrix[8][8] = { 0, };
+	int* V_reference_buffer = new int[Width];
+	int* H_reference_buffer = new int[Width];
+	int matrix[8][8] = { 0, };
 	int** MODE0_matrix = new int* [8];
 	for (int i = 0; i < 8; i++)
 	{
@@ -905,7 +943,7 @@ unsigned char* Intra_Prediction(unsigned char* buffer, int f, unsigned char* MPM
 				for (int j = 0; j < 8; j++)
 				{
 					MPM_buffer[k] = 0;
-					new_buffer[Width * (i + 8 * n) + j + 8 * m] = (unsigned char)MODE0_matrix[i][j];
+					new_buffer[Width * (i + 8 * n) + j + 8 * m] = MODE0_matrix[i][j];
 
 				}
 			}
@@ -916,7 +954,7 @@ unsigned char* Intra_Prediction(unsigned char* buffer, int f, unsigned char* MPM
 				for (int j = 0; j < 8; j++)
 				{
 					MPM_buffer[k] = 1;
-					new_buffer[Width * (i + 8 * n) + j + 8 * m] = (unsigned char)MODE1_matrix[i][j];
+					new_buffer[Width * (i + 8 * n) + j + 8 * m] = MODE1_matrix[i][j];
 
 				}
 			}
@@ -927,7 +965,7 @@ unsigned char* Intra_Prediction(unsigned char* buffer, int f, unsigned char* MPM
 				for (int j = 0; j < 8; j++)
 				{
 					MPM_buffer[k] = 2;
-					new_buffer[Width * (i + 8 * n) + j + 8 * m] = (unsigned char)MODE2_matrix[i][j];
+					new_buffer[Width * (i + 8 * n) + j + 8 * m] = MODE2_matrix[i][j];
 
 				}
 			}
@@ -953,11 +991,11 @@ unsigned char* Intra_Prediction(unsigned char* buffer, int f, unsigned char* MPM
 	return new_buffer;
 }
 
-unsigned char** Reverse_Intra_Mode0(unsigned char matrix[8][8], int k, unsigned char* V_ref, unsigned char* H_ref) {
-	unsigned char** MODE0_matrix = new unsigned char* [8];
+int** Reverse_Intra_Mode0(int matrix[8][8], int k, int* V_ref, int* H_ref) {
+	int** MODE0_matrix = new int* [8];
 	for (int i = 0; i < 8; i++)
 	{
-		MODE0_matrix[i] = new unsigned char[8];
+		MODE0_matrix[i] = new int[8];
 	}
 	int mean = 0;
 
@@ -974,7 +1012,7 @@ unsigned char** Reverse_Intra_Mode0(unsigned char matrix[8][8], int k, unsigned 
 		mean = 0;
 		for (int m = 0; m < 8; m++)
 		{
-			mean = V_ref[8 * ((k % 44) - 1) + m] + 128;
+			mean += V_ref[8 * ((k % 44) - 1) + m] + 128;
 		}
 		for (int i = 0; i < 8; i++)
 		{
@@ -987,7 +1025,7 @@ unsigned char** Reverse_Intra_Mode0(unsigned char matrix[8][8], int k, unsigned 
 	else if (k % 44 == 0) {//1번째 열의 블록 수행
 		mean = 0;
 		for (int m = 0; m < 8; m++) {
-			mean = H_ref[8 * (k % 44) + m] + 128;
+			mean += H_ref[8 * (k % 44) + m] + 128;
 		}
 		for (int i = 0; i < 8; i++)
 		{
@@ -1001,7 +1039,7 @@ unsigned char** Reverse_Intra_Mode0(unsigned char matrix[8][8], int k, unsigned 
 		mean = 0;
 		for (int m = 0; m < 8; m++)
 		{
-			mean = H_ref[8 * (k % 44) + m] + V_ref[8 * ((k % 44) - 1) + m];
+			mean += H_ref[8 * (k % 44) + m] + V_ref[8 * ((k % 44) - 1) + m];
 		}
 		for (int i = 0; i < 8; i++)
 		{
@@ -1014,11 +1052,11 @@ unsigned char** Reverse_Intra_Mode0(unsigned char matrix[8][8], int k, unsigned 
 	return MODE0_matrix;
 }
 
-unsigned char** Reverse_Intra_Mode1(unsigned char matrix[8][8], int k, unsigned char* V_ref, unsigned char* H_ref) {
-	unsigned char** MODE1_matrix = new unsigned char* [8];
+int** Reverse_Intra_Mode1(int matrix[8][8], int k, int* V_ref, int* H_ref) {
+	int** MODE1_matrix = new int* [8];
 	for (int i = 0; i < 8; i++)
 	{
-		MODE1_matrix[i] = new unsigned char[8];
+		MODE1_matrix[i] = new int[8];
 	}
 	int vertical = 0;
 	if (k < 44) {//1번째 행 블록 수행
@@ -1042,11 +1080,11 @@ unsigned char** Reverse_Intra_Mode1(unsigned char matrix[8][8], int k, unsigned 
 	return MODE1_matrix;
 }
 
-unsigned char** Reverse_Intra_Mode2(unsigned char matrix[8][8], int k, unsigned char* V_ref, unsigned char* H_ref) {
-	unsigned char** MODE2_matrix = new unsigned char* [8];
+int** Reverse_Intra_Mode2(int matrix[8][8], int k, int* V_ref, int* H_ref) {
+	int** MODE2_matrix = new int* [8];
 	for (int i = 0; i < 8; i++)
 	{
-		MODE2_matrix[i] = new unsigned char[8];
+		MODE2_matrix[i] = new int[8];
 	}
 
 	if (k % 44 == 0) {//1번째 열 블록 수행
@@ -1070,29 +1108,29 @@ unsigned char** Reverse_Intra_Mode2(unsigned char matrix[8][8], int k, unsigned 
 	return MODE2_matrix;
 }
 
-unsigned char* Reverse_Intra_Prediction(unsigned char* buffer, int f, unsigned char* MPM_buffer) {
+unsigned char* Reverse_Intra_Prediction(int* buffer, int f, unsigned char* MPM_buffer) {
 	unsigned char* new_buffer = new unsigned char[YSize];
-	unsigned char* IncludeMPM_buffer = new unsigned char[YSize + MPM_BUF_Size];
-	unsigned char* V_reference_buffer = new unsigned char[Width];
-	unsigned char* H_reference_buffer = new unsigned char[Width];
-	unsigned char matrix[8][8] = { 0, };
+	
+	int* V_reference_buffer = new int[Width];
+	int* H_reference_buffer = new int[Width];
+	int matrix[8][8] = { 0, };
 
-	unsigned char** MODE0_matrix = new unsigned char* [8];
+	int** MODE0_matrix = new int* [8];
 	for (int i = 0; i < 8; i++)
 	{
-		MODE0_matrix[i] = new unsigned char[8];
+		MODE0_matrix[i] = new int[8];
 	}
 
-	unsigned char** MODE1_matrix = new unsigned char* [8];
+	int** MODE1_matrix = new int* [8];
 	for (int i = 0; i < 8; i++)
 	{
-		MODE1_matrix[i] = new unsigned char[8];
+		MODE1_matrix[i] = new int[8];
 	}
 
-	unsigned char** MODE2_matrix = new unsigned char* [8];
+	int** MODE2_matrix = new int* [8];
 	for (int i = 0; i < 8; i++)
 	{
-		MODE2_matrix[i] = new unsigned char[8];
+		MODE2_matrix[i] = new int[8];
 	}
 
 	int n = -1;
@@ -1167,7 +1205,10 @@ unsigned char* Reverse_Intra_Prediction(unsigned char* buffer, int f, unsigned c
 			{
 				for (int j = 0; j < 8; j++)
 				{
-					new_buffer[Width * (i + 8 * n) + j + 8 * m] = MODE0_matrix[i][j];
+					if (abs(MODE0_matrix[i][j]) > 255) {
+						MODE0_matrix[i][j] = 255;
+					}
+					new_buffer[Width * (i + 8 * n) + j + 8 * m] = (unsigned char)abs(MODE0_matrix[i][j]);
 				}
 			}
 		}
@@ -1176,7 +1217,10 @@ unsigned char* Reverse_Intra_Prediction(unsigned char* buffer, int f, unsigned c
 			{
 				for (int j = 0; j < 8; j++)
 				{
-					new_buffer[Width * (i + 8 * n) + j + 8 * m] = MODE1_matrix[i][j];
+					if (abs(MODE1_matrix[i][j]) > 255) {
+						MODE1_matrix[i][j] = 255;
+					}
+					new_buffer[Width * (i + 8 * n) + j + 8 * m] = (unsigned char)abs(MODE1_matrix[i][j]);
 				}
 			}
 		}
@@ -1185,7 +1229,10 @@ unsigned char* Reverse_Intra_Prediction(unsigned char* buffer, int f, unsigned c
 			{
 				for (int j = 0; j < 8; j++)
 				{
-					new_buffer[Width * (i + 8 * n) + j + 8 * m] = MODE2_matrix[i][j];
+					if (abs(MODE2_matrix[i][j]) > 255) {
+						MODE2_matrix[i][j] = 255;
+					}
+					new_buffer[Width * (i + 8 * n) + j + 8 * m] = (unsigned char)abs(MODE2_matrix[i][j]);
 				}
 			}
 		}
@@ -1205,11 +1252,11 @@ unsigned char* Reverse_Intra_Prediction(unsigned char* buffer, int f, unsigned c
 }
 
 
-unsigned char** Reverse_DPCM_Mode0(unsigned char matrix[8][8], int k, unsigned char* V_ref, unsigned char* H_ref) {
-	unsigned char** MODE0_matrix = new unsigned char* [8];
+int** Reverse_DPCM_Mode0(int matrix[8][8], int k, int* V_ref, int* H_ref) {
+	int** MODE0_matrix = new int* [8];
 	for (int i = 0; i < 8; i++)
 	{
-		MODE0_matrix[i] = new unsigned char[8];
+		MODE0_matrix[i] = new int[8];
 	}
 	for (int i = 0; i < 8; i++)
 	{
@@ -1291,11 +1338,11 @@ unsigned char** Reverse_DPCM_Mode0(unsigned char matrix[8][8], int k, unsigned c
 	return MODE0_matrix;
 }
 
-unsigned char** Reverse_DPCM_Mode1(unsigned char matrix[8][8], int k, unsigned char* V_ref, unsigned char* H_ref) {
-	unsigned char** MODE1_matrix = new unsigned char* [8];
+int** Reverse_DPCM_Mode1(int matrix[8][8], int k, int* V_ref, int* H_ref) {
+	int** MODE1_matrix = new int* [8];
 	for (int i = 0; i < 8; i++)
 	{
-		MODE1_matrix[i] = new unsigned char[8];
+		MODE1_matrix[i] = new int[8];
 	}
 	for (int i = 0; i < 8; i++)
 	{
@@ -1337,11 +1384,11 @@ unsigned char** Reverse_DPCM_Mode1(unsigned char matrix[8][8], int k, unsigned c
 	return MODE1_matrix;
 }
 
-unsigned char** Reverse_DPCM_Mode2(unsigned char matrix[8][8], int k, unsigned char* V_ref, unsigned char* H_ref) {
-	unsigned char** MODE2_matrix = new unsigned char* [8];
+int** Reverse_DPCM_Mode2(int matrix[8][8], int k, int* V_ref, int* H_ref) {
+	int** MODE2_matrix = new int* [8];
 	for (int i = 0; i < 8; i++)
 	{
-		MODE2_matrix[i] = new unsigned char[8];
+		MODE2_matrix[i] = new int[8];
 	}
 	for (int i = 0; i < 8; i++)
 	{
@@ -1384,28 +1431,28 @@ unsigned char** Reverse_DPCM_Mode2(unsigned char matrix[8][8], int k, unsigned c
 	return MODE2_matrix;
 }
 
-unsigned char* Reverse_pixel_DPCM(unsigned char* buffer, int f) {
-	unsigned char* new_buffer = new unsigned char[YSize];
-	unsigned char* V_reference_buffer = new unsigned char[Width];
-	unsigned char* H_reference_buffer = new unsigned char[Width];
-	unsigned char matrix[8][8] = { 0, };
+int* Reverse_pixel_DPCM(int* buffer, int f) {
+	int* new_buffer = new int[YSize];
+	int* V_reference_buffer = new int[Width];
+	int* H_reference_buffer = new int[Width];
+	int matrix[8][8] = { 0, };
 
-	/*unsigned char** MODE0_matrix = new unsigned char* [8];
+	int** MODE0_matrix = new int* [8];
 	for (int i = 0; i < 8; i++)
 	{
-		MODE0_matrix[i] = new unsigned char[8];
-	}*/
-
-	unsigned char** MODE1_matrix = new unsigned char* [8];
-	for (int i = 0; i < 8; i++)
-	{
-		MODE1_matrix[i] = new unsigned char[8];
+		MODE0_matrix[i] = new int[8];
 	}
 
-	/*unsigned char** MODE2_matrix = new unsigned char* [8];
+	/*int** MODE1_matrix = new int* [8];
 	for (int i = 0; i < 8; i++)
 	{
-		MODE2_matrix[i] = new unsigned char[8];
+		MODE1_matrix[i] = new int[8];
+	}*/
+
+	/*int** MODE2_matrix = new int* [8];
+	for (int i = 0; i < 8; i++)
+	{
+		MODE2_matrix[i] = new int[8];
 	}*/
 
 	int n = -1;
@@ -1432,28 +1479,28 @@ unsigned char* Reverse_pixel_DPCM(unsigned char* buffer, int f) {
 			//printf("\n");
 		}
 		//printf("\n");
-
-		MODE1_matrix = Reverse_DPCM_Mode1(matrix, k, V_reference_buffer, H_reference_buffer);
+		MODE0_matrix = Reverse_DPCM_Mode0(matrix, k, V_reference_buffer, H_reference_buffer);
+		//MODE1_matrix = Reverse_DPCM_Mode1(matrix, k, V_reference_buffer, H_reference_buffer);
 		for (int r = 0; r < 8; r++)
 		{
-			V_reference_buffer[r + 8 * m] = MODE1_matrix[r][7];
-			H_reference_buffer[r + 8 * m] = MODE1_matrix[7][r];
+			V_reference_buffer[r + 8 * m] = MODE0_matrix[r][7];
+			H_reference_buffer[r + 8 * m] = MODE0_matrix[7][r];
 		}
 		for (int i = 0; i < 8; i++)
 		{
 			for (int j = 0; j < 8; j++)
 			{
-				new_buffer[Width * (i + 8 * n) + j + 8 * m] = MODE1_matrix[i][j];
+				new_buffer[Width * (i + 8 * n) + j + 8 * m] = MODE0_matrix[i][j];
 			}
 		}
 
 	}
-	/*for (int i = 0; i < 8; i++)
-		delete[] MODE0_matrix[i];
-	delete[] MODE0_matrix;*/
 	for (int i = 0; i < 8; i++)
+		delete[] MODE0_matrix[i];
+	delete[] MODE0_matrix;
+	/*for (int i = 0; i < 8; i++)
 		delete[] MODE1_matrix[i];
-	delete[] MODE1_matrix;
+	delete[] MODE1_matrix;*/
 	/*for (int i = 0; i < 8; i++)
 		delete[] MODE2_matrix[i];
 	delete[] MODE2_matrix;*/
@@ -1461,11 +1508,11 @@ unsigned char* Reverse_pixel_DPCM(unsigned char* buffer, int f) {
 	return new_buffer;
 }
 
-unsigned char* Motion_Estimation(unsigned char* cur_buffer, unsigned char* rec_buffer, unsigned char* X_buf, unsigned char* Y_buf) {
-	unsigned char* new_buffer = new unsigned char[YSize];
-	unsigned char cur_matrix[8][8] = { 0, };
-	unsigned char rec_matrix[8][8] = { 0, };
-	unsigned char new_matrix[8][8] = { 0, };
+int* Motion_Estimation(unsigned char* cur_buffer, unsigned char* rec_buffer, unsigned char* X_buf, unsigned char* Y_buf) {
+	int* new_buffer = new int[YSize];
+	int cur_matrix[8][8] = { 0, };
+	int rec_matrix[8][8] = { 0, };
+	int new_matrix[8][8] = { 0, };
 	int SAD_matrix[8][8] = { 0, };
 	int err_size_matrix[15][15] = { 0, };
 	int n = -1;
@@ -1542,7 +1589,7 @@ unsigned char* Motion_Estimation(unsigned char* cur_buffer, unsigned char* rec_b
 	return new_buffer;
 }
 
-unsigned char* Reverse_Motion_Estimation(unsigned char* cur_buffer, unsigned char* rec_buffer, unsigned char* X_buf, unsigned char* Y_buf) {
+unsigned char* Reverse_Motion_Estimation(int* cur_buffer, unsigned char* rec_buffer, unsigned char* X_buf, unsigned char* Y_buf) {
 	unsigned char* new_buffer = new unsigned char[YSize];
 	unsigned char cur_matrix[8][8] = { 0, };
 	unsigned char rec_matrix[8][8] = { 0, };
@@ -2013,21 +2060,21 @@ int main() {
 	}
 
 	unsigned char* Reconstructed_buf = new unsigned char[YSize];
-	int* encode_buffer2 = new int[YSize];
+	/*int* encode_buffer2 = new int[YSize];*/
 	for (int f = 0; f < Frame; f++)
 	{
 		unsigned char* buffer = new unsigned char[Size];
 		unsigned char* buffer2 = new unsigned char[YSize];
-		unsigned char* buffer3 = new unsigned char[YSize];
-		unsigned char* buffer4 = new unsigned char[YSize];
+		int* buffer3 = new int[YSize];
+		int* buffer4 = new int[YSize];
 		int* buffer5 = new int[YSize];
-		int* encode_buffer1 = new int[YSize];
+		/*int* encode_buffer1 = new int[YSize];*/
 		
-		unsigned char* buffer6 = new unsigned char[YSize];
-		unsigned char* buffer7 = new unsigned char[YSize];
-		unsigned char* buffer8 = new unsigned char[YSize];
+		int* buffer6 = new int[YSize];
+		int* buffer7 = new int[YSize];
+		int* buffer8 = new int[YSize];
 		int* buffer9 = new int[YSize];
-		unsigned char* buffer10 = new unsigned char[YSize];
+		int* buffer10 = new int[YSize];
 		unsigned char* buffer11 = new unsigned char[YSize];
 		//unsigned char* Reconstructed_buf = new unsigned char[YSize];
 		unsigned char* MPM_buffer = new unsigned char[36 * 44];
@@ -2050,23 +2097,23 @@ int main() {
 				buffer3 = Intra_Prediction(buffer2, f, MPM_buffer);
 				buffer4 = pixel_DPCM(buffer3, f);
 				buffer5 = DCT_QUANTI(buffer4); // dct 된 
-				encode_buffer1 = DC_DPCM(buffer5);
-				encode_buffer2 = Reordering_entorpy(encode_buffer1,buffer_stack);
-				realloc(encode_buffer2, sizeof(int) * (*buffer_stack));
+				//encode_buffer1 = DC_DPCM(buffer5);
+				//encode_buffer2 = Reordering_entorpy(encode_buffer1,buffer_stack);
+				//realloc(encode_buffer2, sizeof(int) * (*buffer_stack));
 
 				buffer6 = IDCT_DEQUANTI(buffer5); //idct 된
-				buffer7 = Reverse_pixel_DPCM(buffer4, f);
+				buffer7 = Reverse_pixel_DPCM(buffer6, f);
 				Reconstructed_buf = Reverse_Intra_Prediction(buffer7, f, MPM_buffer);
 			}
 			else { //인터 인코딩
 				buffer8 = Motion_Estimation(buffer2, Reconstructed_buf, X_buf, Y_buf);
 				buffer9 = DCT_QUANTI(buffer8);
-				encode_buffer1 = DC_DPCM(buffer9);
-				encode_buffer2 = Reordering_entorpy(encode_buffer1,buffer_stack);
-				realloc(encode_buffer2, sizeof(int) * (*buffer_stack));
+				//encode_buffer1 = DC_DPCM(buffer9);
+				//encode_buffer2 = Reordering_entorpy(encode_buffer1,buffer_stack);
+				//realloc(encode_buffer2, sizeof(int) * (*buffer_stack));
 
 				buffer10 = IDCT_DEQUANTI(buffer9);
-				Reconstructed_buf = Reverse_Motion_Estimation(buffer8, Reconstructed_buf, X_buf, Y_buf);
+				Reconstructed_buf = Reverse_Motion_Estimation(buffer10, Reconstructed_buf, X_buf, Y_buf);
 			}
 
 			////check MPM_buffer
@@ -2094,24 +2141,27 @@ int main() {
 		//}
 		//
 
-		err3 = fopen_s(&picture3, "encode_Y_football_cif(352X288)_90f.yuv", "a+b"); // wb대신에 a+b를 사용하는 이유는 파일을 이어쓰기 때문이다.
-		if (err3 == 0) {
-			fseek(picture3, *buffer_stack * f, SEEK_SET);
+		//err3 = fopen_s(&picture3, "encode_Y_football_cif(352X288)_90f.yuv", "a+b"); // wb대신에 a+b를 사용하는 이유는 파일을 이어쓰기 때문이다.
+		//if (err3 == 0) {
+		//	fseek(picture3, *buffer_stack * f, SEEK_SET);
+		//	/*for (int i = 0; i < *buffer_stack; i++)
+		//	{
+		//		printf("%X ", encode_buffer2[i]);
+		//	}*/
+		//	fwrite(encode_buffer2, 4, *buffer_stack, picture3);
 
-			fwrite(encode_buffer2, 4, *buffer_stack, picture3);
-
-			fclose(picture3);
-		}
-
-
-		//err5 = fopen_s(&picture5, "reconstruct_Y_football_cif(352X288)_90f.yuv", "a+b"); // wb대신에 a+b를 사용하는 이유는 파일을 이어쓰기 때문이다.
-		//if (err5 == 0) {
-		//	fseek(picture5, YSize * f, SEEK_SET);
-
-		//	fwrite(Reconstructed_buf, 1, YSize, picture5);
-
-		//	fclose(picture5);
+		//	fclose(picture3);
 		//}
+
+
+		err5 = fopen_s(&picture5, "reconstruct_Y_football_cif(352X288)_90f.yuv", "a+b"); // wb대신에 a+b를 사용하는 이유는 파일을 이어쓰기 때문이다.
+		if (err5 == 0) {
+			fseek(picture5, YSize * f, SEEK_SET);
+
+			fwrite(Reconstructed_buf, 1, YSize, picture5);
+
+			fclose(picture5);
+		}
 
 
 		delete[] buffer2;

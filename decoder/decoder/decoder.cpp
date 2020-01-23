@@ -2,6 +2,8 @@
 #include <cstdio>
 #include <stdlib.h>
 #include <algorithm>
+#include <cstring>
+#include <math.h>
 
 #define Width 352
 #define Height 288
@@ -13,10 +15,365 @@ const long YSize = Width * Height;
 const long MPM_BUF_Size = 1584;
 const long USize = Width * Height * 1 / 4;
 const long VSize = Width * Height * 1 / 4;
+
+const int QP_DC = 8;//2~32
+const int QP_AC = 16;//2~64
+const int intra_period = 5; //0~31
+
+//역 인트라
+unsigned char** Reverse_Intra_Mode0(unsigned char matrix[8][8], int, unsigned char*, unsigned char*);
+unsigned char** Reverse_Intra_Mode1(unsigned char matrix[8][8], int, unsigned char*, unsigned char*);
+unsigned char** Reverse_Intra_Mode2(unsigned char matrix[8][8], int, unsigned char*, unsigned char*);
+unsigned char* Reverse_Intra_Prediction(unsigned char*, int, unsigned char*);
+//역 pixel DPCM
 unsigned char** Reverse_DPCM_Mode0(unsigned char matrix[8][8], int, unsigned char*, unsigned char*);
 unsigned char** Reverse_DPCM_Mode1(unsigned char matrix[8][8], int, unsigned char*, unsigned char*);
 unsigned char** Reverse_DPCM_Mode2(unsigned char matrix[8][8], int, unsigned char*, unsigned char*);
-unsigned char* Reverse_pixel_DPCM(unsigned char*,int);
+unsigned char* Reverse_pixel_DPCM(unsigned char*, int);
+//역 인터
+unsigned char* Reverse_Motion_Estimation(unsigned char*, unsigned char*, unsigned char*, unsigned char*);
+//역 양자화
+int** DeQuantization(int matrix[8][8]);
+//역 DCT
+int** BDCT(int**);
+unsigned char* IDCT_DEQUANTI(int*);
+//역 DC_DPCM
+int** Reverse_DPCM_Mode1(int matrix[36][44]);
+int* Reverse_DC_DPCM(int* buffer);
+//역 reordering
+int** Reverse_ZigZag_Scan(int matrix[8][8]);
+int* Reverse_Reordering(int* buffer);
+
+int** Reverse_DPCM_Mode1(int matrix[36][44]) {
+	int** MODE1_matrix = new int* [36];
+	for (int i = 0; i < 36; i++)
+	{
+		MODE1_matrix[i] = new int[44];
+	}
+	for (int i = 0; i < 36; i++)
+	{
+		for (int j = 0; j < 44; j++)
+		{
+			if (i != 0 && j != 0) {
+				matrix[i][j] = matrix[i][j] + (matrix[i][j - 1] + matrix[i - 1][j]) / 2;
+			}
+			else if (i == 0 && j != 0) {//1번째 행의 블록 수행
+				matrix[i][j] = matrix[i][j] + (matrix[i][j - 1] + 1024) / 2;
+			}
+			else if (j == 0 && i != 0) {//1번째 열의 블록 수행
+				matrix[i][j] = matrix[i][j] + (matrix[i - 1][j] + 1024) / 2;
+			}
+			else {
+				matrix[i][j] = matrix[i][j] + 1024;
+			}
+		}
+	}
+	for (int i = 0; i < 36; i++)
+	{
+		for (int j = 0; j < 44; j++)
+		{
+			MODE1_matrix[i][j] = matrix[i][j];
+		}
+	}
+	return MODE1_matrix;
+}
+
+int* Reverse_DC_DPCM(int* buffer) {
+	int* new_buffer = new int[YSize];
+	int matrix[36][44] = { 0, };
+
+	int** MODE1_matrix = new int* [36];
+	for (int i = 0; i < 36; i++)
+	{
+		MODE1_matrix[i] = new int[44];
+	}
+
+	int n = -1;
+	int m = 0;
+	for (int k = 0; k < 1584; k++)
+	{
+		if (k % 44 == 0)
+		{
+			n++;
+			m = 0;
+		}
+		else // k가 1일때 부터 m값 증가
+			m++;
+		//8X8 블록화
+		matrix[n][m] = buffer[Width * (8 * n) + 8 * m];
+	}
+	MODE1_matrix = Reverse_DPCM_Mode1(matrix);
+	new_buffer = buffer;
+	for (int n = 0; n < 36; n++)
+	{
+		for (int m = 0; m < 44; m++)
+		{
+			new_buffer[Width * (8 * n) + 8 * m] = MODE1_matrix[n][m];
+			//printf("%d", MODE1_matrix[n][m]);
+		}
+	}
+	for (int i = 0; i < 36; i++)
+		delete[] MODE1_matrix[i];
+	delete[] MODE1_matrix;
+	return new_buffer;
+}
+
+int** Reverse_ZigZag_Scan(int matrix[8][8]) {
+	int* buffer = new int[64];
+	int* new_buffer = new int[64];
+	int** new_matrix = new int* [8];
+	for (int i = 0; i < 8; i++)
+	{
+		new_matrix[i] = new int[8];
+	}
+	int ZigZag_block[] = {
+	0,1,5,6,14,15,27,28,
+	2,4,7,13,16,26,29,42,
+	3,8,12,17,25,30,41,43,
+	9,11,18,24,31,40,44,53,
+	10,19,23,32,39,45,52,54,
+	20,22,33,38,46,51,55,60,
+	21,34,37,47,50,56,59,61,
+	35,36,48,49,57,58,62,63
+	};
+	int k = 0;
+	for (int i = 0; i < 8; i++)
+	{
+		for (int j = 0; j < 8; j++)
+		{
+			buffer[k] = matrix[i][j];
+			k++;
+		}
+	}
+	for (int k = 0; k < 64; k++)
+	{
+		new_buffer[ZigZag_block[k]] = buffer[k];
+	}
+	k = 0;
+	for (int i = 0; i < 8; i++)
+	{
+		for (int j = 0; j < 8; j++)
+		{
+			new_matrix[i][j] = new_buffer[k];
+			k++;
+		}
+	}
+	return new_matrix;
+}
+
+int* Reverse_Reordering(int* buffer) {
+	int* new_buffer = new int[YSize];
+	int matrix[8][8] = { 0, };
+	int** reorder_matrix = new int* [8];
+	for (int i = 0; i < 8; i++)
+	{
+		reorder_matrix[i] = new int[8];
+	}
+	int n = -1;
+	int m = 0;
+	for (int k = 0; k < 1584; k++)
+	{
+		if (k % 44 == 0)
+		{
+			n++;
+			m = 0;
+		}
+		else // k가 1일때 부터 m값 증가
+			m++;
+		//8X8 블록화
+		for (int i = 0; i < 8; i++)
+		{
+			for (int j = 0; j < 8; j++)
+			{
+				matrix[i][j] = buffer[Width * (i + 8 * n) + j + 8 * m];
+			}
+		}
+		reorder_matrix = Reverse_ZigZag_Scan(matrix);
+		for (int i = 0; i < 8; i++)
+		{
+			for (int j = 0; j < 8; j++)
+			{
+				new_buffer[Width * (i + 8 * n) + j + 8 * m] = reorder_matrix[i][j];
+			}
+		}
+		for (int i = 0; i < 8; i++)
+			delete[] reorder_matrix[i];
+		delete[] reorder_matrix;
+	}
+
+	return new_buffer;
+}
+
+unsigned char* IDCT_DEQUANTI(int* buffer)
+{
+	unsigned char* new_buffer = new unsigned char[YSize];
+	int matrix[8][8] = { 0, };
+	int** IDCT = new int* [8];
+	for (int i = 0; i < 8; i++)
+	{
+		IDCT[i] = new int[8];
+	}
+	int** DeQuanti = new int* [8];
+	for (int i = 0; i < 8; i++)
+	{
+		DeQuanti[i] = new int[8];
+	}
+
+	int n = -1;
+	int m = 0;
+	for (int k = 0; k < 1584; k++)
+	{
+		if (k % 44 == 0)
+		{
+			n++;
+			m = 0;
+		}
+		else // k가 1일때 부터 m값 증가
+			m++;
+		//8X8 블록화
+		for (int i = 0; i < 8; i++)
+		{
+			for (int j = 0; j < 8; j++)
+			{
+				matrix[i][j] = buffer[Width * (i + 8 * n) + j + 8 * m];
+			}
+		}
+		DeQuanti = DeQuantization(matrix);
+		IDCT = BDCT(DeQuanti);
+
+		for (int i = 0; i < 8; i++)
+		{
+			for (int j = 0; j < 8; j++)
+			{
+				new_buffer[Width * (i + 8 * n) + j + 8 * m] = (unsigned char)IDCT[i][j];
+			}
+		}
+		for (int i = 0; i < 8; i++)
+			delete[] IDCT[i];
+		delete[] IDCT;
+		for (int i = 0; i < 8; i++)
+			delete[] DeQuanti[i];
+		delete[] DeQuanti;
+	}
+	return new_buffer;
+}
+int* entropy_decoding(int** buffer, int* buffer_index, int* buffer_stack) {
+
+}
+int** BDCT(int** matrix) {
+	int** IDCT3 = new int* [8];
+	for (int i = 0; i < 8; i++)
+	{
+		IDCT3[i] = new int[8];
+	}
+	double Cu, Cv = 0;
+	double IDCT1[8][8] = { 0, };
+	double IDCT2[8][8] = { 0, };
+	//---------------idct1----------------------
+	for (int y = 0; y < 8; y++)
+	{
+		for (int x = 0; x < 8; x++)
+		{
+			for (int v = 0; v < 8; v++)
+			{
+				if (v == 0) {
+					Cv = sqrt(1.0 / 8.0);
+				}
+				else {
+					Cv = sqrt(1.0 / 4.0);
+				}
+				IDCT1[y][x] += Cv * matrix[x][v] * cos((2.0 * y + 1.0) * v * PI / 16.0);
+			}
+		}
+	}
+
+	//---------------idct2----------------------
+	for (int x = 0; x < 8; x++)
+	{
+		for (int y = 0; y < 8; y++)
+		{
+			for (int u = 0; u < 8; u++)
+			{
+				if (u == 0) {
+					Cu = sqrt(1.0 / 8.0);
+				}
+				else {
+					Cu = sqrt(1.0 / 4.0);
+				}
+				IDCT2[x][y] += Cu * IDCT1[y][u] * cos((2.0 * x + 1.0) * u * PI / 16.0);
+			}
+			IDCT3[x][y] = IDCT2[x][y];
+		}
+	}
+	//=========================== end ====================================================
+	return IDCT3;
+}
+
+int** DeQuantization(int matrix[8][8]) {
+	int** DeQuantizer = new int* [8];
+	for (int i = 0; i < 8; i++)
+	{
+		DeQuantizer[i] = new int[8];
+	}
+	for (int i = 0; i < 8; i++) {
+		for (int j = 0; j < 8; j++)
+		{
+			if (i == 0 && j == 0) {
+				DeQuantizer[i][j] = matrix[i][j] * QP_DC;
+			}
+			else {
+				DeQuantizer[i][j] = matrix[i][j] * QP_AC;
+			}
+		}
+	}
+	/*for (int i = 0; i < 8; i++) {
+		for (int j = 0; j < 8; j++) {
+			printf("%f\t", DeQuantizer[i][j]);
+
+		}
+		printf("\n");
+	}*/
+	return DeQuantizer;
+}
+
+unsigned char* Reverse_Motion_Estimation(unsigned char* cur_buffer, unsigned char* rec_buffer, unsigned char* X_buf, unsigned char* Y_buf) {
+	unsigned char* new_buffer = new unsigned char[YSize];
+	unsigned char cur_matrix[8][8] = { 0, };
+	unsigned char rec_matrix[8][8] = { 0, };
+	int n = -1;
+	int m = 0;
+	for (int k = 0; k < MPM_BUF_Size; k++)
+	{
+		if (k % 44 == 0)
+		{
+			n++;
+			m = 0;
+		}
+		else // k가 1일때 부터 m값 증가
+			m++;
+		//8X8 블록화
+		//현재 매크로 블록
+		for (int i = 0; i < 8; i++)
+		{
+			for (int j = 0; j < 8; j++)
+			{
+
+				cur_matrix[i][j] = cur_buffer[Width * (i + 8 * n) + j + 8 * m];
+			}
+		}
+		for (int i = 0; i < 8; i++)
+		{
+			for (int j = 0; j < 8; j++)
+			{
+				rec_matrix[i][j] = rec_buffer[Width * ((Y_buf[k] - 7) + i + 8 * n) + j + 8 * m + (X_buf[k] - 7)];
+				new_buffer[Width * (i + 8 * n) + j + 8 * m] = cur_matrix[i][j] + rec_matrix[i][j];
+			}
+		}
+
+	}
+	return new_buffer;
+}
+
 unsigned char** Reverse_Intra_Mode0(unsigned char matrix[8][8], int k, unsigned char* V_ref, unsigned char* H_ref) {
 	unsigned char** MODE0_matrix = new unsigned char* [8];
 	for (int i = 0; i < 8; i++)
@@ -133,6 +490,7 @@ unsigned char** Reverse_Intra_Mode2(unsigned char matrix[8][8], int k, unsigned 
 	}
 	return MODE2_matrix;
 }
+
 unsigned char* Reverse_Intra_Prediction(unsigned char* buffer, int f, unsigned char* MPM_buffer) {
 	unsigned char* new_buffer = new unsigned char[YSize];
 	unsigned char* IncludeMPM_buffer = new unsigned char[YSize + MPM_BUF_Size];
@@ -266,7 +624,6 @@ unsigned char* Reverse_Intra_Prediction(unsigned char* buffer, int f, unsigned c
 
 	return new_buffer;
 }
-
 
 unsigned char** Reverse_DPCM_Mode0(unsigned char matrix[8][8], int k, unsigned char* V_ref, unsigned char* H_ref) {
 	unsigned char** MODE0_matrix = new unsigned char* [8];
@@ -524,7 +881,6 @@ unsigned char* Reverse_pixel_DPCM(unsigned char* buffer, int f) {
 	return new_buffer;
 }
 
-
 int main() {
 	errno_t err, err2, err3, err4;
 	FILE* picture;
@@ -533,76 +889,84 @@ int main() {
 	FILE* picture4;
 
 	int Frame = 0;
-	err = fopen_s(&picture, "football_cif(352X288)_90f.yuv", "rb");
+	
+	err = fopen_s(&picture, "encode_Y_football_cif(352X288)_90f.yuv", "rb");
 	if (err == 0) {
 		fseek(picture, 0, SEEK_END);
 		int fileLength = ftell(picture);
-		Frame = fileLength / Size;
+		int* decode_buffer = new int[fileLength];
+		fseek(picture, 0, SEEK_SET);
+		fread(decode_buffer, 4, fileLength, picture);
+		for (int i = 0; i < fileLength; i++)
+		{
+			printf("%X ", decode_buffer[i]); //제대로 받음
+		}
+		delete[] decode_buffer;
 	}
 
-	for (int f = 0; f < Frame; f++)
-	{
-		unsigned char* buffer = new unsigned char[Size];
-		unsigned char* buffer2 = new unsigned char[YSize];
-		unsigned char* buffer3 = new unsigned char[YSize];
-		unsigned char* buffer4 = new unsigned char[YSize];
-		unsigned char* MPM_buffer = new unsigned char[MPM_BUF_Size];
+	//for (int f = 0; f < Frame; f++)
+	//{
+	//	unsigned char* buffer = new unsigned char[Size];
+	//	unsigned char* buffer2 = new unsigned char[YSize];
+	//	unsigned char* buffer3 = new unsigned char[YSize];
+	//	unsigned char* buffer4 = new unsigned char[YSize];
+	//	unsigned char* MPM_buffer = new unsigned char[MPM_BUF_Size];
 
-		err = fopen_s(&picture, "IncludeMPM_buffer_DPCM1_Y_football_cif(352X288)_90f.yuv", "rb");
-		if (err == 0) {
+	//	err = fopen_s(&picture, "encode_Y_football_cif(352X288)_90f.yuv", "rb");
+	//	if (err == 0) {
 
-			fseek(picture, (YSize + MPM_BUF_Size) * f, SEEK_SET); //2번째는 이동할 거리, 3번째는 이동방식 -> 파일의 처음 위치를 기준으로 이동한다.
-			fread(buffer, 1, YSize + MPM_BUF_Size, picture); // (*ptr, size ,count ,FILE* stream) 2번째 인자의 단위는 바이트 이다.
-			//for (int i = 0; i < YSize + MPM_BUF_Size; i++)
-			//{
-			//	if (i % 44 == 0) {
-			//		printf("\n");
-			//	}
-			//	printf("%d ", buffer[i]);
-			//}
-			for (int i = 0; i < MPM_BUF_Size; i++)
-			{
-				MPM_buffer[i] = buffer[i];
-			}
-			for (int i = 0; i < YSize; i++)
-			{
-				buffer2[i] = buffer[i + MPM_BUF_Size];
-			}
-			
-			buffer3 = Reverse_pixel_DPCM(buffer2, f);
-			buffer4 = Reverse_Intra_Prediction(buffer3, f, MPM_buffer);
-			//buffer4 = dctTransform(buffer3);
-			fclose(picture);
-			delete[] buffer;
-			buffer = NULL;
-		}
+	//		fseek(picture, (YSize + MPM_BUF_Size) * f, SEEK_SET); //2번째는 이동할 거리, 3번째는 이동방식 -> 파일의 처음 위치를 기준으로 이동한다.
+	//		fread(buffer, 1, YSize + MPM_BUF_Size, picture); // (*ptr, size ,count ,FILE* stream) 2번째 인자의 단위는 바이트 이다.
+	//		//for (int i = 0; i < YSize + MPM_BUF_Size; i++)
+	//		//{
+	//		//	if (i % 44 == 0) {
+	//		//		printf("\n");
+	//		//	}
+	//		//	printf("%d ", buffer[i]);
+	//		//}
+	//		for (int i = 0; i < MPM_BUF_Size; i++)
+	//		{
+	//			MPM_buffer[i] = buffer[i];
+	//		}
+	//		for (int i = 0; i < YSize; i++)
+	//		{
+	//			buffer2[i] = buffer[i + MPM_BUF_Size];
+	//		}
+	//		
+	//		buffer3 = Reverse_pixel_DPCM(buffer2, f);
+	//		buffer4 = Reverse_Intra_Prediction(buffer3, f, MPM_buffer);
+	//		//buffer4 = dctTransform(buffer3);
+	//		fclose(picture);
+	//		delete[] buffer;
+	//		buffer = NULL;
+	//	}
 
-		err2 = fopen_s(&picture2, "decode_pixel_DPCM_Mode_Y_football_cif(352X288)_90f.yuv", "a+b"); // wb대신에 a+b를 사용하는 이유는 파일을 이어쓰기 때문이다.
-		if (err2 == 0) {
-			fseek(picture2, YSize * f, SEEK_SET);
+	//	err2 = fopen_s(&picture2, "decode_pixel_DPCM_Mode_Y_football_cif(352X288)_90f.yuv", "a+b"); // wb대신에 a+b를 사용하는 이유는 파일을 이어쓰기 때문이다.
+	//	if (err2 == 0) {
+	//		fseek(picture2, YSize * f, SEEK_SET);
 
-			fwrite(buffer3, 1, YSize, picture2);
+	//		fwrite(buffer3, 1, YSize, picture2);
 
-			fclose(picture2);
-			delete[] buffer3;
-			buffer3 = NULL;
-		}
-		
-		err3 = fopen_s(&picture3, "decode_intra_Y_football_cif(352X288)_90f.yuv", "a+b"); // wb대신에 a+b를 사용하는 이유는 파일을 이어쓰기 때문이다.
-		if (err3 == 0) {
-			fseek(picture3, YSize * f, SEEK_SET);
+	//		fclose(picture2);
+	//		delete[] buffer3;
+	//		buffer3 = NULL;
+	//	}
+	//	
+	//	err3 = fopen_s(&picture3, "decode_intra_Y_football_cif(352X288)_90f.yuv", "a+b"); // wb대신에 a+b를 사용하는 이유는 파일을 이어쓰기 때문이다.
+	//	if (err3 == 0) {
+	//		fseek(picture3, YSize * f, SEEK_SET);
 
-			fwrite(buffer4, 1, YSize, picture3);
+	//		fwrite(buffer4, 1, YSize, picture3);
 
-			fclose(picture3);
-			delete[] buffer4;
-			buffer4 = NULL;
-		}
+	//		fclose(picture3);
+	//		delete[] buffer4;
+	//		buffer4 = NULL;
+	//	}
 
-		delete[] buffer2;
-		buffer2 = NULL;
+	//	delete[] buffer2;
+	//	buffer2 = NULL;
 
-	}
+	//}
 
 	return 0;
 }

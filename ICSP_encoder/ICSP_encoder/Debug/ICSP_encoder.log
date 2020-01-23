@@ -1,17 +1,17 @@
 ﻿  ICSP_encoder.cpp
-C:\Users\ICSP\source\repos\ICSP_encoder\ICSP_encoder\ICSP_encoder.cpp(245,28): warning C4244: '=': 'double'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-C:\Users\ICSP\source\repos\ICSP_encoder\ICSP_encoder\ICSP_encoder.cpp(248,28): warning C4244: '=': 'double'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-C:\Users\ICSP\source\repos\ICSP_encoder\ICSP_encoder\ICSP_encoder.cpp(382,28): warning C4244: '=': 'double'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-C:\Users\ICSP\source\repos\ICSP_encoder\ICSP_encoder\ICSP_encoder.cpp(750,39): warning C4244: '=': 'double'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-C:\Users\ICSP\source\repos\ICSP_encoder\ICSP_encoder\ICSP_encoder.cpp(763,39): warning C4244: '=': 'double'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-C:\Users\ICSP\source\repos\ICSP_encoder\ICSP_encoder\ICSP_encoder.cpp(777,39): warning C4244: '=': 'double'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-C:\Users\ICSP\source\repos\ICSP_encoder\ICSP_encoder\ICSP_encoder.cpp(983,39): warning C4244: '=': 'double'에서 'unsigned char'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-C:\Users\ICSP\source\repos\ICSP_encoder\ICSP_encoder\ICSP_encoder.cpp(996,39): warning C4244: '=': 'double'에서 'unsigned char'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-C:\Users\ICSP\source\repos\ICSP_encoder\ICSP_encoder\ICSP_encoder.cpp(1010,39): warning C4244: '=': 'double'에서 'unsigned char'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-C:\Users\ICSP\source\repos\ICSP_encoder\ICSP_encoder\ICSP_encoder.cpp(2002,8): warning C4101: 'picture2' :참조되지 않은 지역 변수입니다.
-C:\Users\ICSP\source\repos\ICSP_encoder\ICSP_encoder\ICSP_encoder.cpp(2005,8): warning C4101: 'picture5' :참조되지 않은 지역 변수입니다.
-C:\Users\ICSP\source\repos\ICSP_encoder\ICSP_encoder\ICSP_encoder.cpp(2004,8): warning C4101: 'picture4' :참조되지 않은 지역 변수입니다.
-C:\Users\ICSP\source\repos\ICSP_encoder\ICSP_encoder\ICSP_encoder.cpp(2000,33): warning C4101: 'err5' :참조되지 않은 지역 변수입니다.
-C:\Users\ICSP\source\repos\ICSP_encoder\ICSP_encoder\ICSP_encoder.cpp(2000,15): warning C4101: 'err2' :참조되지 않은 지역 변수입니다.
-C:\Users\ICSP\source\repos\ICSP_encoder\ICSP_encoder\ICSP_encoder.cpp(2000,27): warning C4101: 'err4' :참조되지 않은 지역 변수입니다.
-  ICSP_encoder.vcxproj -> C:\Users\ICSP\source\repos\ICSP_encoder\Debug\ICSP_encoder.exe
+C:\Users\ICSP\source\repos\ICSP\ICSP_encoder\ICSP_encoder\ICSP_encoder.cpp(253,28): warning C4244: '=': 'double'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+C:\Users\ICSP\source\repos\ICSP\ICSP_encoder\ICSP_encoder\ICSP_encoder.cpp(256,28): warning C4244: '=': 'double'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+C:\Users\ICSP\source\repos\ICSP\ICSP_encoder\ICSP_encoder\ICSP_encoder.cpp(390,28): warning C4244: '=': 'double'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+C:\Users\ICSP\source\repos\ICSP\ICSP_encoder\ICSP_encoder\ICSP_encoder.cpp(788,39): warning C4244: '=': 'double'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+C:\Users\ICSP\source\repos\ICSP\ICSP_encoder\ICSP_encoder\ICSP_encoder.cpp(801,39): warning C4244: '=': 'double'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+C:\Users\ICSP\source\repos\ICSP\ICSP_encoder\ICSP_encoder\ICSP_encoder.cpp(815,39): warning C4244: '=': 'double'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+C:\Users\ICSP\source\repos\ICSP\ICSP_encoder\ICSP_encoder\ICSP_encoder.cpp(1021,39): warning C4244: '=': 'double'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+C:\Users\ICSP\source\repos\ICSP\ICSP_encoder\ICSP_encoder\ICSP_encoder.cpp(1034,39): warning C4244: '=': 'double'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+C:\Users\ICSP\source\repos\ICSP\ICSP_encoder\ICSP_encoder\ICSP_encoder.cpp(1048,39): warning C4244: '=': 'double'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+C:\Users\ICSP\source\repos\ICSP\ICSP_encoder\ICSP_encoder\ICSP_encoder.cpp(2049,8): warning C4101: 'picture2' :참조되지 않은 지역 변수입니다.
+C:\Users\ICSP\source\repos\ICSP\ICSP_encoder\ICSP_encoder\ICSP_encoder.cpp(2051,8): warning C4101: 'picture4' :참조되지 않은 지역 변수입니다.
+C:\Users\ICSP\source\repos\ICSP\ICSP_encoder\ICSP_encoder\ICSP_encoder.cpp(2047,15): warning C4101: 'err2' :참조되지 않은 지역 변수입니다.
+C:\Users\ICSP\source\repos\ICSP\ICSP_encoder\ICSP_encoder\ICSP_encoder.cpp(2050,8): warning C4101: 'picture3' :참조되지 않은 지역 변수입니다.
+C:\Users\ICSP\source\repos\ICSP\ICSP_encoder\ICSP_encoder\ICSP_encoder.cpp(2047,21): warning C4101: 'err3' :참조되지 않은 지역 변수입니다.
+C:\Users\ICSP\source\repos\ICSP\ICSP_encoder\ICSP_encoder\ICSP_encoder.cpp(2047,27): warning C4101: 'err4' :참조되지 않은 지역 변수입니다.
+  ICSP_encoder.vcxproj -> C:\Users\ICSP\source\repos\ICSP\ICSP_encoder\Debug\ICSP_encoder.exe
