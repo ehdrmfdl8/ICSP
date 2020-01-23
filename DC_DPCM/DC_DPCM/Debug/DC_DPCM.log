@@ -1,0 +1,8 @@
+﻿  DC_DPCM.cpp
+C:\Users\ICSP\source\repos\DC_DPCM\DC_DPCM\DC_DPCM.cpp(716,8): warning C4101: 'picture2' :참조되지 않은 지역 변수입니다.
+C:\Users\ICSP\source\repos\DC_DPCM\DC_DPCM\DC_DPCM.cpp(719,8): warning C4101: 'picture5' :참조되지 않은 지역 변수입니다.
+C:\Users\ICSP\source\repos\DC_DPCM\DC_DPCM\DC_DPCM.cpp(718,8): warning C4101: 'picture4' :참조되지 않은 지역 변수입니다.
+C:\Users\ICSP\source\repos\DC_DPCM\DC_DPCM\DC_DPCM.cpp(714,33): warning C4101: 'err5' :참조되지 않은 지역 변수입니다.
+C:\Users\ICSP\source\repos\DC_DPCM\DC_DPCM\DC_DPCM.cpp(714,15): warning C4101: 'err2' :참조되지 않은 지역 변수입니다.
+C:\Users\ICSP\source\repos\DC_DPCM\DC_DPCM\DC_DPCM.cpp(714,27): warning C4101: 'err4' :참조되지 않은 지역 변수입니다.
+  DC_DPCM.vcxproj -> C:\Users\ICSP\source\repos\DC_DPCM\Debug\DC_DPCM.exe
