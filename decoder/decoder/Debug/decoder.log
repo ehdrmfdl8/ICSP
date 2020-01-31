@@ -1,12 +1,10 @@
 ﻿  decoder.cpp
-C:\Users\ICSP\source\repos\ICSP\decoder\decoder\decoder.cpp(303,28): warning C4244: '=': 'double'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-C:\Users\ICSP\source\repos\ICSP\decoder\decoder\decoder.cpp(402,39): warning C4244: '=': 'double'에서 'unsigned char'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-C:\Users\ICSP\source\repos\ICSP\decoder\decoder\decoder.cpp(415,39): warning C4244: '=': 'double'에서 'unsigned char'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-C:\Users\ICSP\source\repos\ICSP\decoder\decoder\decoder.cpp(429,39): warning C4244: '=': 'double'에서 'unsigned char'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-C:\Users\ICSP\source\repos\ICSP\decoder\decoder\decoder.cpp(885,8): warning C4101: 'picture2' :참조되지 않은 지역 변수입니다.
-C:\Users\ICSP\source\repos\ICSP\decoder\decoder\decoder.cpp(887,8): warning C4101: 'picture4' :참조되지 않은 지역 변수입니다.
-C:\Users\ICSP\source\repos\ICSP\decoder\decoder\decoder.cpp(883,15): warning C4101: 'err2' :참조되지 않은 지역 변수입니다.
-C:\Users\ICSP\source\repos\ICSP\decoder\decoder\decoder.cpp(886,8): warning C4101: 'picture3' :참조되지 않은 지역 변수입니다.
-C:\Users\ICSP\source\repos\ICSP\decoder\decoder\decoder.cpp(883,21): warning C4101: 'err3' :참조되지 않은 지역 변수입니다.
-C:\Users\ICSP\source\repos\ICSP\decoder\decoder\decoder.cpp(883,27): warning C4101: 'err4' :참조되지 않은 지역 변수입니다.
+C:\Users\ICSP\source\repos\ICSP\decoder\decoder\decoder.cpp(824,28): warning C4244: '=': 'double'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+C:\Users\ICSP\source\repos\ICSP\decoder\decoder\decoder.cpp(923,39): warning C4244: '=': 'double'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+C:\Users\ICSP\source\repos\ICSP\decoder\decoder\decoder.cpp(936,39): warning C4244: '=': 'double'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+C:\Users\ICSP\source\repos\ICSP\decoder\decoder\decoder.cpp(950,39): warning C4244: '=': 'double'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+C:\Users\ICSP\source\repos\ICSP\decoder\decoder\decoder.cpp(1447,8): warning C4101: 'picture2' :참조되지 않은 지역 변수입니다.
+C:\Users\ICSP\source\repos\ICSP\decoder\decoder\decoder.cpp(1449,8): warning C4101: 'picture4' :참조되지 않은 지역 변수입니다.
+C:\Users\ICSP\source\repos\ICSP\decoder\decoder\decoder.cpp(1445,15): warning C4101: 'err2' :참조되지 않은 지역 변수입니다.
+C:\Users\ICSP\source\repos\ICSP\decoder\decoder\decoder.cpp(1445,27): warning C4101: 'err4' :참조되지 않은 지역 변수입니다.
   decoder.vcxproj -> C:\Users\ICSP\source\repos\ICSP\decoder\Debug\decoder.exe
