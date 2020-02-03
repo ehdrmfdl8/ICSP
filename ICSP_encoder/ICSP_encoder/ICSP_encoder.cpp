@@ -24,7 +24,7 @@ const int pixel_dpcm_select = 0;
 int** Intra_Mode0(int matrix[8][8], int, int*, int*);
 int** Intra_Mode1(int matrix[8][8], int, int*, int*);
 int** Intra_Mode2(int matrix[8][8], int, int*, int*);
-int* Intra_Prediction(unsigned char*, int, unsigned char*);
+int* Intra_Prediction(int*, int, unsigned char*);
 
 //역 인트라
 int** Reverse_Intra_Mode0(int matrix[8][8], int, int*, int*);
@@ -44,9 +44,9 @@ int** Reverse_DPCM_Mode1(int matrix[8][8], int, int*, int*, int);
 int** Reverse_DPCM_Mode2(int matrix[8][8], int, int*, int*, int);
 int* Reverse_pixel_DPCM(int*, int, int);
 //인터
-int* Motion_Estimation(unsigned char* , unsigned char* , unsigned char* , unsigned char* );
+int* Motion_Estimation(int* , unsigned char* , unsigned char* , unsigned char*, int);
 //역 인터
-unsigned char* Reverse_Motion_Estimation(int* , unsigned char* , unsigned char* , unsigned char* );
+unsigned char* Reverse_Motion_Estimation(int* , unsigned char* , unsigned char* , unsigned char* ,int);
 
 //양자화
 int** Quantization(double**);
@@ -158,10 +158,10 @@ int* DC_DPCM(int* buffer, int sel) {
 		else // k가 1일때 부터 m값 증가
 			m++;
 		//8X8 블록화
-		matrix[n][m] = buffer[Width * (8 * n) + 8 * m];
+		matrix[n][m] = buffer[_Width * (8 * n) + 8 * m];
 	}
 	MODE1_matrix = DPCM_Mode1(matrix, sel);
-	for (int i = 0; i < YSize; i++)
+	for (int i = 0; i < _Size; i++)
 	{
 		new_buffer[i] = buffer[i];
 	}
@@ -170,7 +170,7 @@ int* DC_DPCM(int* buffer, int sel) {
 	{
 		for (int m = 0; m < _macro_Wsize; m++)
 		{
-			new_buffer[Width * (8 * n) + 8 * m] = MODE1_matrix[n][m];
+			new_buffer[_Width * (8 * n) + 8 * m] = MODE1_matrix[n][m];
 			//printf("%d", MODE1_matrix[n][m]);
 		}
 	}
@@ -230,11 +230,21 @@ int* Reordering_entorpy_intra(int* buffer,int* buffer_stack, unsigned char* MPM_
 		{
 			for (int j = 0; j < 8; j++)
 			{
-				matrix[i][j] = buffer[Width * (i + 8 * n) + j + 8 * m];
+				matrix[i][j] = buffer[_Width * (i + 8 * n) + j + 8 * m];
 			}
 		}
 		reorder_matrix = ZigZag_Scan(matrix);
-		
+		//if (sel == 1) {
+		//	for (int i = 0; i < 8; i++)
+		//	{
+		//		for (int j = 0; j < 8; j++)
+		//		{
+		//			printf("%d ", reorder_matrix[i][j]);
+		//		}
+		//		printf("\n");
+		//	}
+		//	printf("\n");
+		//}
 		encoding_buffer1 = entropy_encoding_intra(reorder_matrix, buffer_index, buffer_stack, MPM_buf[k], sel);
 		memcpy(encoding_buffer + (*buffer_stack - *buffer_index), encoding_buffer1, sizeof(int) * (*buffer_index));
 		//for (int i = 0; i < 8; i++)
@@ -280,8 +290,8 @@ int* Reordering_entorpy_inter(int* buffer, int* buffer_stack, unsigned char* X_b
 		_macro_Hsize = 18;
 	}
 	int* new_buffer = new int[_Size];
-	int* x_buf = new int[_macro_size];
-	int* y_buf = new int[_macro_size];
+	int* x_buf = new int[1584];
+	int* y_buf = new int[1584];
 	int* encoding_buffer = (int*)malloc(sizeof(int) * _Size);
 	int matrix[8][8] = { 0, };
 	int** reorder_matrix = new int* [8];
@@ -311,7 +321,7 @@ int* Reordering_entorpy_inter(int* buffer, int* buffer_stack, unsigned char* X_b
 		{
 			for (int j = 0; j < 8; j++)
 			{
-				matrix[i][j] = buffer[Width * (i + 8 * n) + j + 8 * m];
+				matrix[i][j] = buffer[_Width * (i + 8 * n) + j + 8 * m];
 			}
 		}
 		reorder_matrix = ZigZag_Scan(matrix);
@@ -1106,7 +1116,7 @@ int** Intra_Mode2(int matrix[8][8], int k, int* V_ref, int* H_ref) {
 	return MODE2_matrix;
 }
 
-int* Intra_Prediction(unsigned char* buffer, int f, unsigned char* MPM_buffer) {
+int* Intra_Prediction(int* buffer, int f, unsigned char* MPM_buffer) {
 	int* new_buffer = new int[YSize];
 	//unsigned char* IncludeMPM_buffer = new unsigned char[YSize + MPM_BUF_Size];
 	int* V_reference_buffer = new int[Width];
@@ -1837,9 +1847,28 @@ int* Reverse_pixel_DPCM(int* buffer, int f, int sel) {
 	return new_buffer;
 }
 
-int* Motion_Estimation(unsigned char* cur_buffer, unsigned char* rec_buffer, unsigned char* X_buf, unsigned char* Y_buf, int sel) {
+int* Motion_Estimation(int* cur_buffer, unsigned char* rec_buffer, unsigned char* X_buf, unsigned char* Y_buf, int sel) {
+	int _Width = 0;
+	int _Height = 0;
+	int _Size = 0;
+	int _macro_size = 0;
+	int _macro_Wsize = 0;
+	if (sel == 0) {
+		_Size = YSize;
+		_Width = Width;
+		_Height = Height;
+		_macro_size = total_macro;
+		_macro_Wsize = 44;
 
-	int* new_buffer = new int[YSize];
+	}
+	if (sel == 1) {
+		_Size = USize;
+		_Width = Width / 2;
+		_Height = Height / 2;
+		_macro_size = total_macro / 4;
+		_macro_Wsize = 22;
+	}
+	int* new_buffer = new int[_Size];
 	int cur_matrix[8][8] = { 0, };
 	int rec_matrix[8][8] = { 0, };
 	int new_matrix[8][8] = { 0, };
@@ -1847,9 +1876,9 @@ int* Motion_Estimation(unsigned char* cur_buffer, unsigned char* rec_buffer, uns
 	int err_size_matrix[15][15] = { 0, };
 	int n = -1;
 	int m = 0;
-	for (int k = 0; k < MPM_BUF_Size; k++)
+	for (int k = 0; k < _macro_size; k++)
 	{
-		if (k % 44 == 0)
+		if (k % _macro_Wsize == 0)
 		{
 			n++;
 			m = 0;
@@ -1863,68 +1892,100 @@ int* Motion_Estimation(unsigned char* cur_buffer, unsigned char* rec_buffer, uns
 			for (int j = 0; j < 8; j++)
 			{
 
-				cur_matrix[i][j] = cur_buffer[Width * (i + 8 * n) + j + 8 * m];
+				cur_matrix[i][j] = cur_buffer[_Width * (i + 8 * n) + j + 8 * m];
 			}
 		}
-		int min = 100000;
-		for (int y = 0; y < 15; y++)
-		{
-			for (int x = 0; x < 15; x++)
+		if (sel == 0) {
+			int min = 100000;
+			for (int y = 0; y < 15; y++)
 			{
-				err_size_matrix[y][x] = 0;
-				//이전 매크로 블록
-				for (int i = 0; i < 8; i++)
+				for (int x = 0; x < 15; x++)
 				{
-					for (int j = 0; j < 8; j++)
-					{
-						if (((y - 7) + i + 8 * n) >= 0 && (j + 8 * m + (x - 7)) >= 0 && ((y - 7) + i + 8 * n) < Height && (j + 8 * m + (x - 7)) < Width) {
-							rec_matrix[i][j] = rec_buffer[Width * ((y - 7) + i + 8 * n) + j + 8 * m + (x - 7)];
-							SAD_matrix[i][j] = cur_matrix[i][j] - rec_matrix[i][j];
-
-							err_size_matrix[y][x] += abs(SAD_matrix[i][j]);
-
-						}
-						else {
-							err_size_matrix[y][x] += 255;
-						}
-					}
-				}
-				if (min > err_size_matrix[y][x]) {
-					min = err_size_matrix[y][x];
-					X_buf[k] = x;
-					Y_buf[k] = y;
+					err_size_matrix[y][x] = 0;
+					//이전 매크로 블록
 					for (int i = 0; i < 8; i++)
 					{
 						for (int j = 0; j < 8; j++)
 						{
-							new_matrix[i][j] = rec_matrix[i][j];
+							if (((y - 7) + i + 8 * n) >= 0 && (j + 8 * m + (x - 7)) >= 0 && ((y - 7) + i + 8 * n) < _Height && (j + 8 * m + (x - 7)) < _Width) {
+								rec_matrix[i][j] = rec_buffer[_Width * ((y - 7) + i + 8 * n) + j + 8 * m + (x - 7)];
+								SAD_matrix[i][j] = cur_matrix[i][j] - rec_matrix[i][j];
+
+								err_size_matrix[y][x] += abs(SAD_matrix[i][j]);
+
+							}
+							else {
+								err_size_matrix[y][x] += 255;
+							}
 						}
 					}
+					if (min > err_size_matrix[y][x]) {
+						min = err_size_matrix[y][x];
+						X_buf[k] = x;
+						Y_buf[k] = y;
+						for (int i = 0; i < 8; i++)
+						{
+							for (int j = 0; j < 8; j++)
+							{
+								new_matrix[i][j] = rec_matrix[i][j];
+							}
+						}
+
+					}
+				}
+			}
+			for (int i = 0; i < 8; i++)
+			{
+				for (int j = 0; j < 8; j++)
+				{
+					new_buffer[_Width * (i + 8 * n) + j + 8 * m] = cur_matrix[i][j] - new_matrix[i][j];
 
 				}
 			}
 		}
-		for (int i = 0; i < 8; i++)
-		{
-			for (int j = 0; j < 8; j++)
+		else {
+			for (int i = 0; i < 8; i++)
 			{
-				new_buffer[Width * (i + 8 * n) + j + 8 * m] = cur_matrix[i][j] - new_matrix[i][j];
-
+				for (int j = 0; j < 8; j++)
+				{
+					rec_matrix[i][j] = rec_buffer[_Width * (((Y_buf[44 * 2 * n + 2 * m] / 2) - 3) + i + 8 * n) + j + 8 * m + ((X_buf[44 * 2 * n + 2 * m] / 2) - 3)];
+					new_buffer[_Width * (i + 8 * n) + j + 8 * m] = cur_matrix[i][j] - rec_matrix[i][j];
+				}
 			}
 		}
 	}
 	return new_buffer;
 }
 
-unsigned char* Reverse_Motion_Estimation(int* cur_buffer, unsigned char* rec_buffer, unsigned char* X_buf, unsigned char* Y_buf) {
+unsigned char* Reverse_Motion_Estimation(int* cur_buffer, unsigned char* rec_buffer, unsigned char* X_buf, unsigned char* Y_buf, int sel) {
+	int _Width = 0;
+	int _Height = 0;
+	int _Size = 0;
+	int _macro_size = 0;
+	int _macro_Wsize = 0;
+	if (sel == 0) {
+		_Size = YSize;
+		_Width = Width;
+		_Height = Height;
+		_macro_size = total_macro;
+		_macro_Wsize = 44;
+
+	}
+	if (sel == 1) {
+		_Size = USize;
+		_Width = Width / 2;
+		_Height = Height / 2;
+		_macro_size = total_macro / 4;
+		_macro_Wsize = 22;
+	}
 	unsigned char* new_buffer = new unsigned char[YSize];
 	unsigned char cur_matrix[8][8] = { 0, };
 	unsigned char rec_matrix[8][8] = { 0, };
 	int n = -1;
 	int m = 0;
-	for (int k = 0; k < MPM_BUF_Size; k++)
+	for (int k = 0; k < _macro_size; k++)
 	{
-		if (k % 44 == 0)
+		if (k % _macro_Wsize == 0)
 		{
 			n++;
 			m = 0;
@@ -1938,15 +1999,27 @@ unsigned char* Reverse_Motion_Estimation(int* cur_buffer, unsigned char* rec_buf
 			for (int j = 0; j < 8; j++)
 			{
 
-				cur_matrix[i][j] = cur_buffer[Width * (i + 8 * n) + j + 8 * m];
+				cur_matrix[i][j] = cur_buffer[_Width * (i + 8 * n) + j + 8 * m];
 			}
 		}
-		for (int i = 0; i < 8; i++)
-		{
-			for (int j = 0; j < 8; j++)
+		if (sel == 0) {
+			for (int i = 0; i < 8; i++)
 			{
-				rec_matrix[i][j] = rec_buffer[Width * ((Y_buf[k] - 7) + i + 8 * n) + j + 8 * m + (X_buf[k] - 7)];
-				new_buffer[Width * (i + 8 * n) + j + 8 * m] = cur_matrix[i][j] + rec_matrix[i][j];
+				for (int j = 0; j < 8; j++)
+				{
+					rec_matrix[i][j] = rec_buffer[_Width * ((Y_buf[k] - 7) + i + 8 * n) + j + 8 * m + (X_buf[k] - 7)];
+					new_buffer[_Width * (i + 8 * n) + j + 8 * m] = cur_matrix[i][j] + rec_matrix[i][j];
+				}
+			}
+		}
+		else {
+			for (int i = 0; i < 8; i++)
+			{
+				for (int j = 0; j < 8; j++)
+				{
+					rec_matrix[i][j] = rec_buffer[_Width * (((Y_buf[44 * 2 * n + 2 * m] / 2) - 3) + i + 8 * n) + j + 8 * m + ((X_buf[44 * 2 * n + 2 * m] / 2) - 3)];
+					new_buffer[_Width * (i + 8 * n) + j + 8 * m] = cur_matrix[i][j] + rec_matrix[i][j];
+				}
 			}
 		}
 
@@ -2820,7 +2893,7 @@ int main() {
 	for (int f = 0; f < Frame; f++)
 	{
 		unsigned char* buffer = new unsigned char[Size];
-		unsigned char* buffer2 = new unsigned char[YSize];
+		int* buffer2 = new int[YSize];
 		int* U_buffer = new int[USize];
 		int* V_buffer = new int[VSize];
 		int* U_buffer2 = new int[USize];
@@ -2839,10 +2912,6 @@ int main() {
 		int* encode_V_buffer1 = new int[VSize];
 		int* buffer6 = new int[YSize];
 		int* buffer7 = new int[YSize];
-		int* buffer8 = new int[YSize];
-		int* buffer9 = new int[YSize];
-		int* buffer10 = new int[YSize];
-		unsigned char* buffer11 = new unsigned char[YSize];
 		//unsigned char* Reconstructed_buf = new unsigned char[YSize];
 		unsigned char* MPM_buffer = new unsigned char[36 * 44];
 		unsigned char* X_buf = new unsigned char[36 * 44];
@@ -2877,6 +2946,7 @@ int main() {
 			}
 			if (f % intra_period == 0) { //f % intra_period == 0 인트라 인코딩
 				buffer3 = Intra_Prediction(buffer2, f, MPM_buffer);
+
 				buffer4 = pixel_DPCM(buffer3, f, sel_Y);
 				U_buffer2 = pixel_DPCM(U_buffer, f, sel_UV);
 				V_buffer2 = pixel_DPCM(V_buffer, f, sel_UV);
@@ -2886,12 +2956,12 @@ int main() {
 				V_buffer3 = DCT_QUANTI(V_buffer2, sel_UV);
 
 				encode_buffer1 = DC_DPCM(buffer5, sel_Y);
-				encode_U_buffer1 = DC_DPCM(U_buffer, sel_UV);
-				encode_V_buffer1 = DC_DPCM(V_buffer, sel_UV);
+				encode_U_buffer1 = DC_DPCM(U_buffer3, sel_UV);
+				encode_V_buffer1 = DC_DPCM(V_buffer3, sel_UV);
 
 				encode_buffer2 = Reordering_entorpy_intra(encode_buffer1, buffer_stack, MPM_buffer, sel_Y);
-				encode_U_buffer2 = Reordering_entorpy_intra(encode_U_buffer1, U_buffer_stack, MPM_buffer, sel_Y);
-				encode_V_buffer2 = Reordering_entorpy_intra(encode_V_buffer1, V_buffer_stack, MPM_buffer, sel_Y);
+				encode_U_buffer2 = Reordering_entorpy_intra(encode_U_buffer1, U_buffer_stack, MPM_buffer, sel_UV);
+				encode_V_buffer2 = Reordering_entorpy_intra(encode_V_buffer1, V_buffer_stack, MPM_buffer, sel_UV);
 
 				realloc(encode_buffer2, sizeof(int) * (*buffer_stack));
 				realloc(encode_U_buffer2, sizeof(int) * (*U_buffer_stack));
@@ -2913,34 +2983,33 @@ int main() {
 				}
 			}
 			else { //인터 인코딩
-				buffer8 = Motion_Estimation(buffer2, Reconstructed_buf, X_buf, Y_buf ,sel_Y);
+				buffer3 = Motion_Estimation(buffer2, Reconstructed_buf, X_buf, Y_buf ,sel_Y);
+				U_buffer2 = Motion_Estimation(U_buffer, Reconstructed_U_buf, X_buf, Y_buf, sel_UV);
+				V_buffer2 = Motion_Estimation(V_buffer, Reconstructed_V_buf, X_buf, Y_buf, sel_UV);
 
-				buffer9 = DCT_QUANTI(buffer8 ,sel_Y);
-				U_buffer3 = DCT_QUANTI(U_buffer, sel_UV);
-				V_buffer3 = DCT_QUANTI(V_buffer, sel_UV);
+				buffer4 = DCT_QUANTI(buffer3 ,sel_Y);
+				U_buffer3 = DCT_QUANTI(U_buffer2, sel_UV);
+				V_buffer3 = DCT_QUANTI(V_buffer2, sel_UV);
 
-				encode_buffer1 = DC_DPCM(buffer9, sel_Y);
-				encode_U_buffer1 = DC_DPCM(U_buffer, sel_UV);
-				encode_V_buffer1 = DC_DPCM(V_buffer, sel_UV);
+				encode_buffer1 = DC_DPCM(buffer4, sel_Y);
+				encode_U_buffer1 = DC_DPCM(U_buffer3, sel_UV);
+				encode_V_buffer1 = DC_DPCM(V_buffer3, sel_UV);
 
 				encode_buffer2 = Reordering_entorpy_inter(encode_buffer1, buffer_stack, X_buf, Y_buf, sel_Y);
-				encode_U_buffer2 = Reordering_entorpy_inter(encode_buffer1, U_buffer_stack, X_buf, Y_buf, sel_UV);
-				encode_V_buffer2 = Reordering_entorpy_inter(encode_buffer1, V_buffer_stack, X_buf, Y_buf, sel_UV);
+				encode_U_buffer2 = Reordering_entorpy_inter(encode_U_buffer1, U_buffer_stack, X_buf, Y_buf, sel_UV);
+				encode_V_buffer2 = Reordering_entorpy_inter(encode_V_buffer1, V_buffer_stack, X_buf, Y_buf, sel_UV);
 
 				realloc(encode_buffer2, sizeof(int) * (*buffer_stack));
 				realloc(encode_U_buffer2, sizeof(int) * (*U_buffer_stack));
 				realloc(encode_V_buffer2, sizeof(int) * (*V_buffer_stack));
 
-				buffer10 = IDCT_DEQUANTI(buffer9, sel_Y);
+				buffer5 = IDCT_DEQUANTI(buffer4, sel_Y);
 				U_buffer4 = IDCT_DEQUANTI(U_buffer3, sel_UV);
 				V_buffer4 = IDCT_DEQUANTI(V_buffer3, sel_UV);
 
-				Reconstructed_buf = Reverse_Motion_Estimation(buffer10, Reconstructed_buf, X_buf, Y_buf);
-				for (int i = 0; i < USize; i++)
-				{
-					Reconstructed_U_buf[i] = (unsigned char)U_buffer4[i];
-					Reconstructed_V_buf[i] = (unsigned char)V_buffer4[i];
-				}
+				Reconstructed_buf = Reverse_Motion_Estimation(buffer5, Reconstructed_buf, X_buf, Y_buf, sel_Y);
+				Reconstructed_U_buf = Reverse_Motion_Estimation(U_buffer4, Reconstructed_U_buf, X_buf, Y_buf, sel_UV);
+				Reconstructed_V_buf = Reverse_Motion_Estimation(V_buffer4, Reconstructed_V_buf, X_buf, Y_buf, sel_UV);
 			}
 			fclose(picture);
 			delete[] buffer;
@@ -2958,7 +3027,11 @@ int main() {
 		if (err2 == 0) {
 			fseek(picture2, *U_buffer_stack * f, SEEK_SET);
 			fwrite(encode_U_buffer2, 4, *U_buffer_stack, picture2);
-			fclose(picture2);
+			/*for (int i = 0; i < *U_buffer_stack; i++)
+			{
+				printf("%X ", encode_U_buffer2[i]);
+			}
+			fclose(picture2);*/
 		}
 		err2 = fopen_s(&picture2, "encode_Y_football_cif(352X288)_90f.yuv", "a+b"); // wb대신에 a+b를 사용하는 이유는 파일을 이어쓰기 때문이다.
 		if (err2 == 0) {
@@ -2973,17 +3046,17 @@ int main() {
 			fwrite(Reconstructed_buf, 1, YSize, picture3);
 			fclose(picture3);
 		}
-		err4 = fopen_s(&picture4, "reconstruct_Y_football_cif(352X288)_90f.yuv", "a+b"); // wb대신에 a+b를 사용하는 이유는 파일을 이어쓰기 때문이다.
-		if (err4 == 0) {
-			fseek(picture4, USize * f, SEEK_SET);
-			fwrite(Reconstructed_U_buf, 1, USize, picture4);
-			fclose(picture4);
+		err3 = fopen_s(&picture3, "reconstruct_Y_football_cif(352X288)_90f.yuv", "a+b"); // wb대신에 a+b를 사용하는 이유는 파일을 이어쓰기 때문이다.
+		if (err3 == 0) {
+			fseek(picture3, USize * f, SEEK_SET);
+			fwrite(Reconstructed_U_buf, 1, USize, picture3);
+			fclose(picture3);
 		}
-		err5 = fopen_s(&picture5, "reconstruct_Y_football_cif(352X288)_90f.yuv", "a+b"); // wb대신에 a+b를 사용하는 이유는 파일을 이어쓰기 때문이다.
-		if (err5 == 0) {
-			fseek(picture5, VSize * f, SEEK_SET);
-			fwrite(Reconstructed_V_buf, 1, VSize, picture5);
-			fclose(picture5);
+		err3 = fopen_s(&picture3, "reconstruct_Y_football_cif(352X288)_90f.yuv", "a+b"); // wb대신에 a+b를 사용하는 이유는 파일을 이어쓰기 때문이다.
+		if (err3 == 0) {
+			fseek(picture3, VSize * f, SEEK_SET);
+			fwrite(Reconstructed_V_buf, 1, VSize, picture3);
+			fclose(picture3);
 		}
 
 
@@ -3000,14 +3073,6 @@ int main() {
 		delete[] buffer7;
 		buffer7 = NULL;
 
-		delete[] buffer8;
-		buffer8 = NULL;
-		delete[] buffer9;
-		buffer9 = NULL;
-		delete[] buffer10;
-		buffer10 = NULL;
-		delete[] buffer11;
-		buffer11 = NULL;
 		delete[] U_buffer2;
 		U_buffer2 = NULL;
 		delete[] V_buffer2;
@@ -3028,9 +3093,9 @@ int main() {
 	delete[] Reconstructed_buf;
 	Reconstructed_buf = NULL;
 	delete[] Reconstructed_U_buf;
-	Reconstructed_buf = NULL;
+	Reconstructed_U_buf = NULL;
 	delete[] Reconstructed_V_buf;
-	Reconstructed_buf = NULL;
+	Reconstructed_V_buf = NULL;
 	delete[] encode_buffer2;
 	encode_buffer2 = NULL;
 	return 0;

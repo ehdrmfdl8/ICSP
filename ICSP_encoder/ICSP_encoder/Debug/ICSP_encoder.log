@@ -1,10 +1,14 @@
 ﻿  ICSP_encoder.cpp
-C:\Users\ICSP\source\repos\ICSP\ICSP_encoder\ICSP_encoder\ICSP_encoder.cpp(323,28): warning C4244: '=': 'double'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-C:\Users\ICSP\source\repos\ICSP\ICSP_encoder\ICSP_encoder\ICSP_encoder.cpp(326,28): warning C4244: '=': 'double'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-C:\Users\ICSP\source\repos\ICSP\ICSP_encoder\ICSP_encoder\ICSP_encoder.cpp(946,39): warning C4244: '=': 'double'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-C:\Users\ICSP\source\repos\ICSP\ICSP_encoder\ICSP_encoder\ICSP_encoder.cpp(959,39): warning C4244: '=': 'double'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-C:\Users\ICSP\source\repos\ICSP\ICSP_encoder\ICSP_encoder\ICSP_encoder.cpp(973,39): warning C4244: '=': 'double'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-C:\Users\ICSP\source\repos\ICSP\ICSP_encoder\ICSP_encoder\ICSP_encoder.cpp(1180,39): warning C4244: '=': 'double'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-C:\Users\ICSP\source\repos\ICSP\ICSP_encoder\ICSP_encoder\ICSP_encoder.cpp(1193,39): warning C4244: '=': 'double'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-C:\Users\ICSP\source\repos\ICSP\ICSP_encoder\ICSP_encoder\ICSP_encoder.cpp(1207,39): warning C4244: '=': 'double'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+C:\Users\ICSP\source\repos\ICSP\ICSP_encoder\ICSP_encoder\ICSP_encoder.cpp(406,28): warning C4244: '=': 'double'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+C:\Users\ICSP\source\repos\ICSP\ICSP_encoder\ICSP_encoder\ICSP_encoder.cpp(409,28): warning C4244: '=': 'double'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+C:\Users\ICSP\source\repos\ICSP\ICSP_encoder\ICSP_encoder\ICSP_encoder.cpp(1029,39): warning C4244: '=': 'double'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+C:\Users\ICSP\source\repos\ICSP\ICSP_encoder\ICSP_encoder\ICSP_encoder.cpp(1042,39): warning C4244: '=': 'double'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+C:\Users\ICSP\source\repos\ICSP\ICSP_encoder\ICSP_encoder\ICSP_encoder.cpp(1056,39): warning C4244: '=': 'double'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+C:\Users\ICSP\source\repos\ICSP\ICSP_encoder\ICSP_encoder\ICSP_encoder.cpp(1263,39): warning C4244: '=': 'double'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+C:\Users\ICSP\source\repos\ICSP\ICSP_encoder\ICSP_encoder\ICSP_encoder.cpp(1276,39): warning C4244: '=': 'double'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+C:\Users\ICSP\source\repos\ICSP\ICSP_encoder\ICSP_encoder\ICSP_encoder.cpp(1290,39): warning C4244: '=': 'double'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+C:\Users\ICSP\source\repos\ICSP\ICSP_encoder\ICSP_encoder\ICSP_encoder.cpp(2878,8): warning C4101: 'picture5' :참조되지 않은 지역 변수입니다.
+C:\Users\ICSP\source\repos\ICSP\ICSP_encoder\ICSP_encoder\ICSP_encoder.cpp(2877,8): warning C4101: 'picture4' :참조되지 않은 지역 변수입니다.
+C:\Users\ICSP\source\repos\ICSP\ICSP_encoder\ICSP_encoder\ICSP_encoder.cpp(2873,33): warning C4101: 'err5' :참조되지 않은 지역 변수입니다.
+C:\Users\ICSP\source\repos\ICSP\ICSP_encoder\ICSP_encoder\ICSP_encoder.cpp(2873,27): warning C4101: 'err4' :참조되지 않은 지역 변수입니다.
   ICSP_encoder.vcxproj -> C:\Users\ICSP\source\repos\ICSP\ICSP_encoder\Debug\ICSP_encoder.exe

@@ -13,6 +13,7 @@ using namespace std;
 const long Size = Width * Height * 3 / 2;
 const long YSize = Width * Height;
 const long MPM_BUF_Size = 1584;
+const long total_macro = 1584;
 const long USize = Width * Height * 1 / 4;
 const long VSize = Width * Height * 1 / 4;
 
@@ -29,35 +30,54 @@ int** Reverse_Intra_Mode1(int matrix[8][8], int, int*, int*);
 int** Reverse_Intra_Mode2(int matrix[8][8], int, int*, int*);
 unsigned char* Reverse_Intra_Prediction(int*, int, unsigned char*);
 //역 pixel DPCM
-int** Reverse_DPCM_Mode0(int matrix[8][8], int, int*, int*);
-int** Reverse_DPCM_Mode1(int matrix[8][8], int, int*, int*);
-int** Reverse_DPCM_Mode2(int matrix[8][8], int, int*, int*);
-int* Reverse_pixel_DPCM(int*, int);
+int** Reverse_DPCM_Mode0(int matrix[8][8], int, int*, int*, int);
+int** Reverse_DPCM_Mode1(int matrix[8][8], int, int*, int*, int);
+int** Reverse_DPCM_Mode2(int matrix[8][8], int, int*, int*, int);
+int* Reverse_pixel_DPCM(int*, int, int);
 //엔트로피 디코딩
 int* entropy_decoding(unsigned int* ,int, unsigned char*, unsigned char*, unsigned char*);
 //역 인터
-unsigned char* Reverse_Motion_Estimation(int*, unsigned char*, unsigned char*, unsigned char*);
+unsigned char* Reverse_Motion_Estimation(int*, unsigned char*, unsigned char*, unsigned char*, int);
 //역 양자화
-int** DeQuantization(int matrix[8][8]);
+double** DeQuantization(int matrix[8][8]);
 //역 DCT
-int** BDCT(int**);
-int* IDCT_DEQUANTI(int*);
+int** BDCT(double**);
+int* IDCT_DEQUANTI(int*, int);
 //역 DC_DPCM
-int** Reverse_DPCM_Mode1(int matrix[36][44]);
-int* Reverse_DC_DPCM(int* buffer);
+int** Reverse_DPCM_Mode1(int **, int);
+int* Reverse_DC_DPCM(int*, int);
 //역 reordering
 int** Reverse_ZigZag_Scan(int matrix[8][8]);
-int* Reverse_Reordering(int* buffer);
+int* Reverse_Reordering(int* buffer, int);
 
-int** Reverse_DPCM_Mode1(int matrix[36][44]) {
-	int** MODE1_matrix = new int* [36];
-	for (int i = 0; i < 36; i++)
-	{
-		MODE1_matrix[i] = new int[44];
+int** Reverse_DPCM_Mode1(int **matrix, int sel) {
+	int _Width = 0;
+	int _Size = 0;
+	int _macro_size = 0;
+	int _macro_Wsize = 0;
+	int _macro_Hsize = 0;
+	if (sel == 0) {
+		_Size = YSize;
+		_Width = Width;
+		_macro_size = total_macro;
+		_macro_Wsize = 44;
+		_macro_Hsize = 36;
 	}
-	for (int i = 0; i < 36; i++)
+	if (sel == 1) {
+		_Size = USize;
+		_Width = Width / 2;
+		_macro_size = total_macro / 4;
+		_macro_Wsize = 22;
+		_macro_Hsize = 18;
+	}
+	int** MODE1_matrix = new int* [_macro_Hsize];
+	for (int i = 0; i < _macro_Hsize; i++)
 	{
-		for (int j = 0; j < 44; j++)
+		MODE1_matrix[i] = new int[_macro_Wsize];
+	}
+	for (int i = 0; i < _macro_Hsize; i++)
+	{
+		for (int j = 0; j < _macro_Wsize; j++)
 		{
 			if (i != 0 && j != 0) {
 				matrix[i][j] = matrix[i][j] + (matrix[i][j - 1] + matrix[i - 1][j]) / 2;
@@ -73,9 +93,9 @@ int** Reverse_DPCM_Mode1(int matrix[36][44]) {
 			}
 		}
 	}
-	for (int i = 0; i < 36; i++)
+	for (int i = 0; i < _macro_Hsize; i++)
 	{
-		for (int j = 0; j < 44; j++)
+		for (int j = 0; j < _macro_Wsize; j++)
 		{
 			MODE1_matrix[i][j] = matrix[i][j];
 		}
@@ -83,21 +103,43 @@ int** Reverse_DPCM_Mode1(int matrix[36][44]) {
 	return MODE1_matrix;
 }
 
-int* Reverse_DC_DPCM(int* buffer) {
-	int* new_buffer = new int[YSize];
-	int matrix[36][44] = { 0, };
-
-	int** MODE1_matrix = new int* [36];
-	for (int i = 0; i < 36; i++)
+int* Reverse_DC_DPCM(int* buffer, int sel) {
+	int _Width = 0;
+	int _Size = 0;
+	int _macro_size = 0;
+	int _macro_Wsize = 0;
+	int _macro_Hsize = 0;
+	if (sel == 0) {
+		_Size = YSize;
+		_Width = Width;
+		_macro_size = total_macro;
+		_macro_Wsize = 44;
+		_macro_Hsize = 36;
+	}
+	if (sel == 1) {
+		_Size = USize;
+		_Width = Width / 2;
+		_macro_size = total_macro / 4;
+		_macro_Wsize = 22;
+		_macro_Hsize = 18;
+	}
+	int* new_buffer = new int[_Size];
+	int** matrix = new int* [_macro_Hsize];
+	for (int i = 0; i < _macro_Hsize; i++)
 	{
-		MODE1_matrix[i] = new int[44];
+		matrix[i] = new int[_macro_Wsize];
+	}
+	int** MODE1_matrix = new int* [_macro_Hsize];
+	for (int i = 0; i < _macro_Hsize; i++)
+	{
+		MODE1_matrix[i] = new int[_macro_Wsize];
 	}
 
 	int n = -1;
 	int m = 0;
-	for (int k = 0; k < 1584; k++)
+	for (int k = 0; k < _macro_size; k++)
 	{
-		if (k % 44 == 0)
+		if (k % _macro_Wsize == 0)
 		{
 			n++;
 			m = 0;
@@ -105,19 +147,19 @@ int* Reverse_DC_DPCM(int* buffer) {
 		else // k가 1일때 부터 m값 증가
 			m++;
 		//8X8 블록화
-		matrix[n][m] = buffer[Width * (8 * n) + 8 * m];
+		matrix[n][m] = buffer[_Width * (8 * n) + 8 * m];
 	}
-	MODE1_matrix = Reverse_DPCM_Mode1(matrix);
+	MODE1_matrix = Reverse_DPCM_Mode1(matrix, sel);
 	new_buffer = buffer;
-	for (int n = 0; n < 36; n++)
+	for (int n = 0; n < _macro_Hsize; n++)
 	{
-		for (int m = 0; m < 44; m++)
+		for (int m = 0; m < _macro_Wsize; m++)
 		{
-			new_buffer[Width * (8 * n) + 8 * m] = MODE1_matrix[n][m];
+			new_buffer[_Width * (8 * n) + 8 * m] = MODE1_matrix[n][m];
 			//printf("%d", MODE1_matrix[n][m]);
 		}
 	}
-	for (int i = 0; i < 36; i++)
+	for (int i = 0; i < _macro_Hsize; i++)
 		delete[] MODE1_matrix[i];
 	delete[] MODE1_matrix;
 	return new_buffer;
@@ -166,8 +208,28 @@ int** Reverse_ZigZag_Scan(int matrix[8][8]) {
 	return new_matrix;
 }
 
-int* Reverse_Reordering(int* buffer) {
-	int* new_buffer = new int[YSize];
+int* Reverse_Reordering(int* buffer, int sel) {
+	int _Width = 0;
+	int _Height = 0;
+	int _Size = 0;
+	int _macro_size = 0;
+	int _macro_Wsize = 0;
+	if (sel == 0) {
+		_Size = YSize;
+		_Width = Width;
+		_Height = Height;
+		_macro_size = total_macro;
+		_macro_Wsize = 44;
+
+	}
+	if (sel == 1) {
+		_Size = USize;
+		_Width = Width / 2;
+		_Height = Height / 2;
+		_macro_size = total_macro / 4;
+		_macro_Wsize = 22;
+	}
+	int* new_buffer = new int[_Size];
 	int matrix[8][8] = { 0, };
 	int** reorder_matrix = new int* [8];
 	for (int i = 0; i < 8; i++)
@@ -176,9 +238,9 @@ int* Reverse_Reordering(int* buffer) {
 	}
 	int n = -1;
 	int m = 0;
-	for (int k = 0; k < 1584; k++)
+	for (int k = 0; k < _macro_size; k++)
 	{
-		if (k % 44 == 0)
+		if (k % _macro_Wsize == 0)
 		{
 			n++;
 			m = 0;
@@ -190,7 +252,7 @@ int* Reverse_Reordering(int* buffer) {
 		{
 			for (int j = 0; j < 8; j++)
 			{
-				matrix[i][j] = buffer[Width * (i + 8 * n) + j + 8 * m];
+				matrix[i][j] = buffer[_Width * (i + 8 * n) + j + 8 * m];
 			}
 		}
 		reorder_matrix = Reverse_ZigZag_Scan(matrix);
@@ -198,7 +260,7 @@ int* Reverse_Reordering(int* buffer) {
 		{
 			for (int j = 0; j < 8; j++)
 			{
-				new_buffer[Width * (i + 8 * n) + j + 8 * m] = reorder_matrix[i][j];
+				new_buffer[_Width * (i + 8 * n) + j + 8 * m] = reorder_matrix[i][j];
 			}
 		}
 		for (int i = 0; i < 8; i++)
@@ -209,26 +271,43 @@ int* Reverse_Reordering(int* buffer) {
 	return new_buffer;
 }
 
-int* IDCT_DEQUANTI(int* buffer)
+int* IDCT_DEQUANTI(int* buffer, int sel)
 {
-	int* new_buffer = new int[YSize];
+	int _Width = 0;
+	int _Size = 0;
+	int _macro_size = 0;
+	int _macro_Wsize = 0;
+	if (sel == 0) {
+		_Size = YSize;
+		_Width = Width;
+		_macro_size = total_macro;
+		_macro_Wsize = 44;
+
+	}
+	if (sel == 1) {
+		_Size = USize;
+		_Width = Width / 2;
+		_macro_size = total_macro / 4;
+		_macro_Wsize = 22;
+	}
+	int* new_buffer = new int[_Size];
 	int matrix[8][8] = { 0, };
 	int** IDCT = new int* [8];
 	for (int i = 0; i < 8; i++)
 	{
 		IDCT[i] = new int[8];
 	}
-	int** DeQuanti = new int* [8];
+	double** DeQuanti = new double* [8];
 	for (int i = 0; i < 8; i++)
 	{
-		DeQuanti[i] = new int[8];
+		DeQuanti[i] = new double[8];
 	}
 
 	int n = -1;
 	int m = 0;
-	for (int k = 0; k < 1584; k++)
+	for (int k = 0; k < _macro_size; k++)
 	{
-		if (k % 44 == 0)
+		if (k % _macro_Wsize == 0)
 		{
 			n++;
 			m = 0;
@@ -240,34 +319,19 @@ int* IDCT_DEQUANTI(int* buffer)
 		{
 			for (int j = 0; j < 8; j++)
 			{
-				matrix[i][j] = buffer[Width * (i + 8 * n) + j + 8 * m];
-				//printf("%d ", matrix[i][j]);
+				matrix[i][j] = buffer[_Width * (i + 8 * n) + j + 8 * m];
 			}
-			//printf("\n");
 		}
 		DeQuanti = DeQuantization(matrix);
-		//for (int i = 0; i < 8; i++)
-		//{
-		//	for (int j = 0; j < 8; j++)
-		//	{
-		//		//printf("%d ", DeQuanti[i][j]);
-		//	}
-		//	//printf("\n");
-		//}
 		IDCT = BDCT(DeQuanti);
 
 		for (int i = 0; i < 8; i++)
 		{
 			for (int j = 0; j < 8; j++)
 			{
-				new_buffer[Width * (i + 8 * n) + j + 8 * m] = IDCT[i][j];
-				/*if (k == 1580) {
-					printf("%d ", new_buffer[Width * (i + 8 * n) + j + 8 * m]);
-				}*/
+				new_buffer[_Width * (i + 8 * n) + j + 8 * m] = IDCT[i][j];
 			}
-			//printf("\n");
 		}
-		//printf("\n");
 		for (int i = 0; i < 8; i++)
 			delete[] IDCT[i];
 		delete[] IDCT;
@@ -284,12 +348,35 @@ int getAbit(unsigned int x, int n) { // getbit()
 }
 
 int* entropy_decoding(unsigned int* decode_buffer ,int fileLength, unsigned char* MPM_buffer_, unsigned char* x_buf, unsigned char* y_buf) {
-	int* new_buffer = new int[YSize * 90]; // 프레임 정하기
+	int sel = 0;
+	int _Width = 0;
+	int _Height = 0;
+	int _Size = 0;
+	int _macro_size = 0;
+	int _macro_Wsize = 0;
+	int _macro_Hsize = 0;
+	if (sel == 0) {
+		_Size = YSize;
+		_Width = Width;
+		_Height = Height;
+		_macro_size = total_macro;
+		_macro_Wsize = 44;
+		_macro_Hsize = 36;
+	}
+	if (sel >= 1) {
+		_Size = USize;
+		_Width = Width / 2;
+		_Height = Height / 2;
+		_macro_size = total_macro / 4;
+		_macro_Wsize = 22;
+		_macro_Hsize = 18;
+	}
+	int* new_buffer = new int[Size * 90]; // 프레임 정하기
 	int num;
 	num = (int)(Frame_size / intra_period);
-	unsigned char* MPM_buffer = new unsigned char[1584 * num];//* round(Frame_size / intra_period)
+	unsigned char* MPM_buffer = new unsigned char[1584 * num];
 	unsigned char* X_buffer = new unsigned char[1584 * (Frame_size - num)];
-	unsigned char* Y_buffer = new unsigned char[1584 * (Frame_size - num)];//1584 * (Frame_size - round(Frame_size / intra_period))
+	unsigned char* Y_buffer = new unsigned char[1584 * (Frame_size - num)];
 	int matrix[8][8] = { 0, };
 	
 	//inter
@@ -332,6 +419,7 @@ int* entropy_decoding(unsigned int* decode_buffer ,int fileLength, unsigned char
 	MPM_buffer = MPM_buffer_;
 	X_buffer = x_buf;
 	Y_buffer = y_buf;
+
 	for (int m = 0; m < (fileLength / 4) ; m++)
 	{
 		n = 0;
@@ -340,18 +428,20 @@ int* entropy_decoding(unsigned int* decode_buffer ,int fileLength, unsigned char
 			if (y == 7 && x == 8) {
 				y = 0;
 				x = 0;
-				if (f % intra_period == 0) {
+				if (f % intra_period == 0 && sel == 0) {//Y일때
 					if (MPMword > 2 ||  MPMword < 0) {
-						printf("error");
+						printf("MPM_error");
 					}
 					MPM_buffer[z] = (unsigned char)MPMword;
 					z++;
 					MPMword = 0;
 					MPM_flag = 1;
+					code_flag = 0;
+					data_flag = 0;
 				}
-				else {
+				else if(f % intra_period != 0 && sel == 0){//Y일때
 					if (X_bufword > 15 || Y_bufword > 15 || Y_bufword < 0 || X_bufword < 0) {
-						printf("error");
+						printf("XY_buf_error");
 					}
 					X_buffer[p] = (unsigned char)X_bufword;
 					Y_buffer[p] = (unsigned char)Y_bufword;
@@ -359,40 +449,88 @@ int* entropy_decoding(unsigned int* decode_buffer ,int fileLength, unsigned char
 					X_bufword = 0;
 					Y_bufword = 0;
 					X_flag = 1;
+					code_flag = 0;
+					data_flag = 0;
+				}
+				else { // UV일때
+					code_flag = 1;
+					data_flag = 0;
+				}
+				if (sel == 0) {
+					for (int i = 0; i < 8; i++)
+					{
+						for (int j = 0; j < 8; j++)
+						{
+							new_buffer[Size * f + Width * (i + 8 * block_Y) + j + 8 * block_X] = matrix[i][j];
+						}
+					}
+				}
+				else {
+					for (int i = 0; i < 8; i++)
+					{
+						for (int j = 0; j < 8; j++)
+						{
+							new_buffer[Size * f + YSize + (USize * (sel - 1)) + _Width * (i + 8 * block_Y) + j + 8 * block_X] = matrix[i][j];
+						}
+					}
 				}
 				
-				for (int i = 0; i < 8; i++)
-				{
-					for (int j = 0; j < 8; j++)
-					{
-						new_buffer[YSize * f +Width * (i + 8 * block_Y) + j + 8 * block_X] = matrix[i][j];
-						//printf("%d ", matrix[i][j]);
-					}
-					//printf("\n");
-				}
 				if (n != 0) {
 					m++;
 				}
 				n = 0;
 				block_X++;
 				
-				code_flag = 0;
-				data_flag = 0;
-				if (block_Y == 35 && block_X == 44) {
+				
+				if (block_Y == (_macro_Hsize - 1) && block_X == _macro_Wsize) {
 					block_X = 0;
-					block_Y = 0;
-					f += 1;
-					if (f % intra_period == 0) {
+					block_Y = 0;	
+					if (sel == 0) {
+						if (f % intra_period == 0) {
+							X_flag = 0;
+							MPM_flag = 1;
+						}
+						else {
+							MPM_flag = 0;
+							X_flag = 1;
+						}
+					}
+
+					sel += 1;
+					if (sel == 3) {
+						sel = 0;
+						
+						f += 1;
+					}
+					if (sel == 0) {
+						_Size = YSize;
+						_Width = Width;
+						_Height = Height;
+						_macro_size = total_macro;
+						_macro_Wsize = 44;
+						_macro_Hsize = 36;
+						if (f % intra_period == 0) {
+							X_flag = 0;
+							MPM_flag = 1;
+						}
+						else {
+							MPM_flag = 0;
+							X_flag = 1;
+						}
+					}
+					if (sel >= 1) {
+						_Size = USize;
+						_Width = Width / 2;
+						_Height = Height / 2;
+						_macro_size = total_macro / 4;
+						_macro_Wsize = 22;
+						_macro_Hsize = 18;
 						X_flag = 0;
-						MPM_flag = 1;
-					}
-					else {
 						MPM_flag = 0;
-						X_flag = 1;
+						code_flag = 1;
 					}
-					//Frame[0]++;
 				}
-				if (block_X == 44) {
+				if (block_X == _macro_Wsize) {
 					block_Y++;
 					block_X = 0;
 				}
@@ -401,7 +539,8 @@ int* entropy_decoding(unsigned int* decode_buffer ,int fileLength, unsigned char
 				y++;
 				x = 0;
 			}
-			if (MPM_flag == 1) {
+			//MPM & X,Y flag
+			if (MPM_flag == 1 && sel == 0) {
 				bit = getAbit(decode_buffer[m], n);
 				n++;
 				MPMword = (MPMword << 1) + bit;
@@ -413,7 +552,7 @@ int* entropy_decoding(unsigned int* decode_buffer ,int fileLength, unsigned char
 					code_flag = 1;
 				}
 			}
-			else if (X_flag == 1) {
+			else if (X_flag == 1 && sel == 0) {
 				bit = getAbit(decode_buffer[m], n);
 				n++;
 				X_bufword = (X_bufword << 1) + bit;
@@ -425,7 +564,7 @@ int* entropy_decoding(unsigned int* decode_buffer ,int fileLength, unsigned char
 					Y_flag = 1;
 				}
 			}
-			else if (Y_flag == 1) {
+			else if (Y_flag == 1 && sel == 0) {
 				bit = getAbit(decode_buffer[m], n);
 				n++;
 				Y_bufword = (Y_bufword << 1) + bit;
@@ -437,6 +576,10 @@ int* entropy_decoding(unsigned int* decode_buffer ,int fileLength, unsigned char
 					code_flag = 1;
 				}
 			}
+			else if ((MPM_flag == 1 || X_flag == 1) && sel != 0) {
+				printf("flag_error");
+			}
+			// code -> sign -> data
 			else if (code_flag == 1) {
 				bit = getAbit(decode_buffer[m], n);
 				n++;
@@ -779,7 +922,7 @@ int* entropy_decoding(unsigned int* decode_buffer ,int fileLength, unsigned char
 	return new_buffer;
 }
 
-int** BDCT(int** matrix) {
+int** BDCT(double** matrix) {
 	int** IDCT3 = new int* [8];
 	for (int i = 0; i < 8; i++)
 	{
@@ -821,18 +964,18 @@ int** BDCT(int** matrix) {
 				}
 				IDCT2[x][y] += Cu * IDCT1[y][u] * cos((2.0 * x + 1.0) * u * PI / 16.0);
 			}
-			IDCT3[x][y] = IDCT2[x][y];
+			IDCT3[x][y] = (int)IDCT2[x][y];
 		}
 	}
 	//=========================== end ====================================================
 	return IDCT3;
 }
 
-int** DeQuantization(int matrix[8][8]) {
-	int** DeQuantizer = new int* [8];
+double** DeQuantization(int matrix[8][8]) {
+	double** DeQuantizer = new double* [8];
 	for (int i = 0; i < 8; i++)
 	{
-		DeQuantizer[i] = new int[8];
+		DeQuantizer[i] = new double[8];
 	}
 	for (int i = 0; i < 8; i++) {
 		for (int j = 0; j < 8; j++)
@@ -845,25 +988,38 @@ int** DeQuantization(int matrix[8][8]) {
 			}
 		}
 	}
-	/*for (int i = 0; i < 8; i++) {
-		for (int j = 0; j < 8; j++) {
-			printf("%f\t", DeQuantizer[i][j]);
-
-		}
-		printf("\n");
-	}*/
 	return DeQuantizer;
 }
 
-unsigned char* Reverse_Motion_Estimation(int* cur_buffer, unsigned char* rec_buffer, unsigned char* X_buf, unsigned char* Y_buf) {
+unsigned char* Reverse_Motion_Estimation(int* cur_buffer, unsigned char* rec_buffer, unsigned char* X_buf, unsigned char* Y_buf, int sel) {
+	int _Width = 0;
+	int _Height = 0;
+	int _Size = 0;
+	int _macro_size = 0;
+	int _macro_Wsize = 0;
+	if (sel == 0) {
+		_Size = YSize;
+		_Width = Width;
+		_Height = Height;
+		_macro_size = total_macro;
+		_macro_Wsize = 44;
+
+	}
+	if (sel == 1) {
+		_Size = USize;
+		_Width = Width / 2;
+		_Height = Height / 2;
+		_macro_size = total_macro / 4;
+		_macro_Wsize = 22;
+	}
 	unsigned char* new_buffer = new unsigned char[YSize];
 	unsigned char cur_matrix[8][8] = { 0, };
 	unsigned char rec_matrix[8][8] = { 0, };
 	int n = -1;
 	int m = 0;
-	for (int k = 0; k < MPM_BUF_Size; k++)
+	for (int k = 0; k < _macro_size; k++)
 	{
-		if (k % 44 == 0)
+		if (k % _macro_Wsize == 0)
 		{
 			n++;
 			m = 0;
@@ -877,15 +1033,27 @@ unsigned char* Reverse_Motion_Estimation(int* cur_buffer, unsigned char* rec_buf
 			for (int j = 0; j < 8; j++)
 			{
 
-				cur_matrix[i][j] = cur_buffer[Width * (i + 8 * n) + j + 8 * m];
+				cur_matrix[i][j] = cur_buffer[_Width * (i + 8 * n) + j + 8 * m];
 			}
 		}
-		for (int i = 0; i < 8; i++)
-		{
-			for (int j = 0; j < 8; j++)
+		if (sel == 0) {
+			for (int i = 0; i < 8; i++)
 			{
-				rec_matrix[i][j] = rec_buffer[Width * ((Y_buf[k] - 7) + i + 8 * n) + j + 8 * m + (X_buf[k] - 7)];
-				new_buffer[Width * (i + 8 * n) + j + 8 * m] = cur_matrix[i][j] + rec_matrix[i][j];
+				for (int j = 0; j < 8; j++)
+				{
+					rec_matrix[i][j] = rec_buffer[_Width * ((Y_buf[k] - 7) + i + 8 * n) + j + 8 * m + (X_buf[k] - 7)];
+					new_buffer[_Width * (i + 8 * n) + j + 8 * m] = cur_matrix[i][j] + rec_matrix[i][j];
+				}
+			}
+		}
+		else {
+			for (int i = 0; i < 8; i++)
+			{
+				for (int j = 0; j < 8; j++)
+				{
+					rec_matrix[i][j] = rec_buffer[_Width * (((Y_buf[44 * 2 * n + 2 * m] / 2) - 3) + i + 8 * n) + j + 8 * m + ((X_buf[44 * 2 * n + 2 * m] / 2) - 3)];
+					new_buffer[_Width * (i + 8 * n) + j + 8 * m] = cur_matrix[i][j] + rec_matrix[i][j];
+				}
 			}
 		}
 
@@ -1153,7 +1321,24 @@ unsigned char* Reverse_Intra_Prediction(int* buffer, int f, unsigned char* MPM_b
 	return new_buffer;
 }
 
-int** Reverse_DPCM_Mode0(int matrix[8][8], int k, int* V_ref, int* H_ref) {
+int** Reverse_DPCM_Mode0(int matrix[8][8], int k, int* V_ref, int* H_ref, int sel) {
+	int _Width = 0;
+	int _Size = 0;
+	int _macro_size = 0;
+	int _macro_Wsize = 0;
+	if (sel == 0) {
+		_Size = YSize;
+		_Width = Width;
+		_macro_size = total_macro;
+		_macro_Wsize = 44;
+
+	}
+	if (sel == 1) {
+		_Size = USize;
+		_Width = Width / 2;
+		_macro_size = total_macro / 4;
+		_macro_Wsize = 22;
+	}
 	int** MODE0_matrix = new int* [8];
 	for (int i = 0; i < 8; i++)
 	{
@@ -1163,7 +1348,7 @@ int** Reverse_DPCM_Mode0(int matrix[8][8], int k, int* V_ref, int* H_ref) {
 	{
 		for (int j = 0; j < 8; j++)
 		{
-			if (k < 44 && ((k % 44) == 0)) {//1번째 행과 열 블록 수행
+			if (k < _macro_Wsize && ((k % _macro_Wsize) == 0)) {//1번째 행과 열 블록 수행
 				if (i == 0) {//1번째 행 픽셀 수행
 					if (j > 0) {
 						matrix[i][j] = matrix[i][j] + matrix[i][j - 1];
@@ -1179,13 +1364,13 @@ int** Reverse_DPCM_Mode0(int matrix[8][8], int k, int* V_ref, int* H_ref) {
 					matrix[i][j] = matrix[i][j] + (matrix[i - 1][j] + matrix[i][j - 1]) / 2;
 				}
 			}
-			else if (k < 44) {//1번째 행의 블록 수행
+			else if (k < _macro_Wsize) {//1번째 행의 블록 수행
 				if (i == 0) {//1번째 행 픽셀 수행
 					if (j > 0) {
 						matrix[i][j] = matrix[i][j] + matrix[i][j - 1];
 					}
 					else { //i==0 && j==0 인 경우
-						matrix[i][j] = matrix[i][j] + V_ref[8 * ((k % 44) - 1) + i];
+						matrix[i][j] = matrix[i][j] + V_ref[8 * ((k % _macro_Wsize) - 1) + i];
 					}
 				}
 				else if (j == 0) {//1번째 행 픽셀 수행
@@ -1195,17 +1380,17 @@ int** Reverse_DPCM_Mode0(int matrix[8][8], int k, int* V_ref, int* H_ref) {
 					matrix[i][j] = matrix[i][j] + (matrix[i - 1][j] + matrix[i][j - 1]) / 2;
 				}
 			}
-			else if (k % 44 == 0) {//1번째 열의 블록 수행
+			else if (k % _macro_Wsize == 0) {//1번째 열의 블록 수행
 				if (j == 0) { // 1번째 열 픽셀 수행
 					if (i > 0) {
 						matrix[i][j] = matrix[i][j] + matrix[i - 1][j];
 					}
 					else { // i ==0 && j == 0
-						matrix[i][j] = matrix[i][j] + H_ref[8 * (k % 44) + j]; // 사실상 H_ref[0]
+						matrix[i][j] = matrix[i][j] + H_ref[8 * (k % _macro_Wsize) + j]; // 사실상 H_ref[0]
 					}
 				}
 				else if (i == 0) { // 1번째 행 픽셀 수행
-					matrix[i][j] = matrix[i][j] + (matrix[i][j - 1] + H_ref[8 * (k % 44) + j]) / 2;
+					matrix[i][j] = matrix[i][j] + (matrix[i][j - 1] + H_ref[8 * (k % _macro_Wsize) + j]) / 2;
 				}
 				else {
 					matrix[i][j] = matrix[i][j] + (matrix[i - 1][j] + matrix[i][j - 1]) / 2;
@@ -1214,14 +1399,14 @@ int** Reverse_DPCM_Mode0(int matrix[8][8], int k, int* V_ref, int* H_ref) {
 			else {// k > 44 || ((k % 44) != 0) 인 블록
 				if (i == 0) { // 1번째 열 픽셀 수행
 					if (j > 0) {
-						matrix[i][j] = matrix[i][j] + (matrix[i][j - 1] + H_ref[8 * (k % 44) + j]) / 2;
+						matrix[i][j] = matrix[i][j] + (matrix[i][j - 1] + H_ref[8 * (k % _macro_Wsize) + j]) / 2;
 					}
 					else { // i ==0 && j == 0
-						matrix[i][j] = matrix[i][j] + (H_ref[8 * ((k % 44) + j)] + V_ref[8 * ((k % 44) - 1) + i]) / 2;//사실상 j = 0
+						matrix[i][j] = matrix[i][j] + (H_ref[8 * ((k % _macro_Wsize) + j)] + V_ref[8 * ((k % _macro_Wsize) - 1) + i]) / 2;//사실상 j = 0
 					}
 				}
 				else if (j == 0) {// 1번째 행 픽셀 수행
-					matrix[i][j] = matrix[i][j] + (matrix[i - 1][j] + V_ref[8 * ((k % 44) - 1) + i]) / 2;
+					matrix[i][j] = matrix[i][j] + (matrix[i - 1][j] + V_ref[8 * ((k % _macro_Wsize) - 1) + i]) / 2;
 				}
 				else { // i > 0 && j > 0
 					matrix[i][j] = matrix[i][j] + (matrix[i][j - 1] + matrix[i - 1][j]) / 2;
@@ -1239,7 +1424,24 @@ int** Reverse_DPCM_Mode0(int matrix[8][8], int k, int* V_ref, int* H_ref) {
 	return MODE0_matrix;
 }
 
-int** Reverse_DPCM_Mode1(int matrix[8][8], int k, int* V_ref, int* H_ref) {
+int** Reverse_DPCM_Mode1(int matrix[8][8], int k, int* V_ref, int* H_ref, int sel) {
+	int _Width = 0;
+	int _Size = 0;
+	int _macro_size = 0;
+	int _macro_Wsize = 0;
+	if (sel == 0) {
+		_Size = YSize;
+		_Width = Width;
+		_macro_size = total_macro;
+		_macro_Wsize = 44;
+
+	}
+	if (sel == 1) {
+		_Size = USize;
+		_Width = Width / 2;
+		_macro_size = total_macro / 4;
+		_macro_Wsize = 22;
+	}
 	int** MODE1_matrix = new int* [8];
 	for (int i = 0; i < 8; i++)
 	{
@@ -1249,7 +1451,7 @@ int** Reverse_DPCM_Mode1(int matrix[8][8], int k, int* V_ref, int* H_ref) {
 	{
 		for (int j = 0; j < 8; j++)
 		{
-			if (k < 44) {//1번째 행 블록 수행
+			if (k < _macro_Wsize) {//1번째 행 블록 수행
 				if (k == 0 && i == 0 && j == 0) {
 					matrix[i][j] = matrix[i][j] + 128;
 				}
@@ -1258,7 +1460,7 @@ int** Reverse_DPCM_Mode1(int matrix[8][8], int k, int* V_ref, int* H_ref) {
 						matrix[i][j] = matrix[i][j] + matrix[i][j - 1];
 					}
 					else {//i==0&&j==0 인경우
-						matrix[i][j] = matrix[i][j] + V_ref[8 * ((k % 44) - 1) + i];
+						matrix[i][j] = matrix[i][j] + V_ref[8 * ((k % _macro_Wsize) - 1) + i];
 					}
 				}
 				else {
@@ -1267,7 +1469,7 @@ int** Reverse_DPCM_Mode1(int matrix[8][8], int k, int* V_ref, int* H_ref) {
 			}
 			else {// k>44인 블록 수행
 				if (i == 0) {//1번째 행 블록 수행
-					matrix[i][j] = matrix[i][j] + H_ref[8 * (k % 44) + j]; // H_ref는 352길이의 행
+					matrix[i][j] = matrix[i][j] + H_ref[8 * (k % _macro_Wsize) + j]; // H_ref는 352길이의 행
 				}
 				else {
 					matrix[i][j] = matrix[i][j] + matrix[i - 1][j];
@@ -1285,7 +1487,24 @@ int** Reverse_DPCM_Mode1(int matrix[8][8], int k, int* V_ref, int* H_ref) {
 	return MODE1_matrix;
 }
 
-int** Reverse_DPCM_Mode2(int matrix[8][8], int k, int* V_ref, int* H_ref) {
+int** Reverse_DPCM_Mode2(int matrix[8][8], int k, int* V_ref, int* H_ref, int sel) {
+	int _Width = 0;
+	int _Size = 0;
+	int _macro_size = 0;
+	int _macro_Wsize = 0;
+	if (sel == 0) {
+		_Size = YSize;
+		_Width = Width;
+		_macro_size = total_macro;
+		_macro_Wsize = 44;
+
+	}
+	if (sel == 1) {
+		_Size = USize;
+		_Width = Width / 2;
+		_macro_size = total_macro / 4;
+		_macro_Wsize = 22;
+	}
 	int** MODE2_matrix = new int* [8];
 	for (int i = 0; i < 8; i++)
 	{
@@ -1295,7 +1514,7 @@ int** Reverse_DPCM_Mode2(int matrix[8][8], int k, int* V_ref, int* H_ref) {
 	{
 		for (int j = 0; j < 8; j++)
 		{
-			if (k % 44 == 0) {//1번째 열 블록 수행
+			if (k % _macro_Wsize == 0) {//1번째 열 블록 수행
 				if (k == 0 && i == 0 && j == 0) {
 					matrix[i][j] = matrix[i][j] + 128;
 				}
@@ -1304,7 +1523,7 @@ int** Reverse_DPCM_Mode2(int matrix[8][8], int k, int* V_ref, int* H_ref) {
 						matrix[i][j] = matrix[i][j] + matrix[i - 1][j];
 					}
 					else {//i==0&&j==0 인경우
-						matrix[i][j] = matrix[i][j] + H_ref[8 * (k % 44) + j];
+						matrix[i][j] = matrix[i][j] + H_ref[8 * (k % _macro_Wsize) + j];
 					}
 				}
 				else {
@@ -1313,7 +1532,7 @@ int** Reverse_DPCM_Mode2(int matrix[8][8], int k, int* V_ref, int* H_ref) {
 			}
 			else {// k%44 != 0 인 블록 수행
 				if (j == 0) {//1번째 열 블록 수행
-					matrix[i][j] = matrix[i][j] + V_ref[8 * ((k % 44) - 1) + i];
+					matrix[i][j] = matrix[i][j] + V_ref[8 * ((k % _macro_Wsize) - 1) + i];
 				}
 				else {
 					matrix[i][j] = matrix[i][j] + matrix[i][j - 1];
@@ -1326,16 +1545,32 @@ int** Reverse_DPCM_Mode2(int matrix[8][8], int k, int* V_ref, int* H_ref) {
 		for (int j = 0; j < 8; j++)
 		{
 			MODE2_matrix[i][j] = matrix[i][j];
-			//printf("%d", matrix[i][j]);
 		}
 	}
 	return MODE2_matrix;
 }
 
-int* Reverse_pixel_DPCM(int* buffer, int f) {
-	int* new_buffer = new int[YSize];
-	int* V_reference_buffer = new int[Width];
-	int* H_reference_buffer = new int[Width];
+int* Reverse_pixel_DPCM(int* buffer, int f, int sel) {
+	int _Width = 0;
+	int _Size = 0;
+	int _macro_size = 0;
+	int _macro_Wsize = 0;
+	if (sel == 0) {
+		_Size = YSize;
+		_Width = Width;
+		_macro_size = total_macro;
+		_macro_Wsize = 44;
+
+	}
+	if (sel == 1) {
+		_Size = USize;
+		_Width = Width / 2;
+		_macro_size = total_macro / 4;
+		_macro_Wsize = 22;
+	}
+	int* new_buffer = new int[_Size];
+	int* V_reference_buffer = new int[_Width];
+	int* H_reference_buffer = new int[_Width];
 	int matrix[8][8] = { 0, };
 
 	int** MODE0_matrix = new int* [8];
@@ -1358,11 +1593,11 @@ int* Reverse_pixel_DPCM(int* buffer, int f) {
 
 	int n = -1;
 	int m = 0;
-	for (int k = 0; k < MPM_BUF_Size; k++)
+	for (int k = 0; k < _macro_size; k++)
 	{
 
 
-		if (k % 44 == 0)
+		if (k % _macro_Wsize == 0)
 		{
 			n++;
 			m = 0;
@@ -1374,15 +1609,12 @@ int* Reverse_pixel_DPCM(int* buffer, int f) {
 		{
 			for (int j = 0; j < 8; j++)
 			{
-				//printf("%d ", buffer[Width * (i + 8 * n) + j + 8 * m]);
-				matrix[i][j] = buffer[Width * (i + 8 * n) + j + 8 * m];
+				matrix[i][j] = buffer[_Width * (i + 8 * n) + j + 8 * m];
 			}
-			//printf("\n");
 		}
-		//printf("\n");
 		switch (pixel_dpcm_select)
 		{
-		case 0: MODE0_matrix = Reverse_DPCM_Mode0(matrix, k, V_reference_buffer, H_reference_buffer);
+		case 0: MODE0_matrix = Reverse_DPCM_Mode0(matrix, k, V_reference_buffer, H_reference_buffer, sel);
 			for (int r = 0; r < 8; r++)
 			{
 				V_reference_buffer[r + 8 * m] = MODE0_matrix[r][7];
@@ -1392,11 +1624,11 @@ int* Reverse_pixel_DPCM(int* buffer, int f) {
 			{
 				for (int j = 0; j < 8; j++)
 				{
-					new_buffer[Width * (i + 8 * n) + j + 8 * m] = MODE0_matrix[i][j];
+					new_buffer[_Width * (i + 8 * n) + j + 8 * m] = MODE0_matrix[i][j];
 				}
 			}
 			break;
-		case 1: MODE1_matrix = Reverse_DPCM_Mode0(matrix, k, V_reference_buffer, H_reference_buffer);
+		case 1: MODE1_matrix = Reverse_DPCM_Mode0(matrix, k, V_reference_buffer, H_reference_buffer, sel);
 			for (int r = 0; r < 8; r++)
 			{
 				V_reference_buffer[r + 8 * m] = MODE1_matrix[r][7];
@@ -1406,11 +1638,11 @@ int* Reverse_pixel_DPCM(int* buffer, int f) {
 			{
 				for (int j = 0; j < 8; j++)
 				{
-					new_buffer[Width * (i + 8 * n) + j + 8 * m] = MODE1_matrix[i][j];
+					new_buffer[_Width * (i + 8 * n) + j + 8 * m] = MODE1_matrix[i][j];
 				}
 			}
 			break;
-		case 2: MODE2_matrix = Reverse_DPCM_Mode0(matrix, k, V_reference_buffer, H_reference_buffer);
+		case 2: MODE2_matrix = Reverse_DPCM_Mode0(matrix, k, V_reference_buffer, H_reference_buffer, sel);
 			for (int r = 0; r < 8; r++)
 			{
 				V_reference_buffer[r + 8 * m] = MODE2_matrix[r][7];
@@ -1420,7 +1652,7 @@ int* Reverse_pixel_DPCM(int* buffer, int f) {
 			{
 				for (int j = 0; j < 8; j++)
 				{
-					new_buffer[Width * (i + 8 * n) + j + 8 * m] = MODE2_matrix[i][j];
+					new_buffer[_Width * (i + 8 * n) + j + 8 * m] = MODE2_matrix[i][j];
 				}
 			}
 			break;
@@ -1437,7 +1669,8 @@ int* Reverse_pixel_DPCM(int* buffer, int f) {
 	for (int i = 0; i < 8; i++)
 		delete[] MODE2_matrix[i];
 	delete[] MODE2_matrix;
-
+	delete[] V_reference_buffer;
+	delete[] H_reference_buffer;
 	return new_buffer;
 }
 
@@ -1449,11 +1682,13 @@ int main() {
 	FILE* picture4;
 
 	int* Frame = 0;
-	int* buffer0 = new int[YSize * Frame_size];
+	int* buffer0 = new int[Size * Frame_size];
 	unsigned char* MPM_buffer = new unsigned char[1584 * (int)round(Frame_size / intra_period)];
 	unsigned char* X_buf = new unsigned char[1584 * (Frame_size - (int)round(Frame_size / intra_period))];
 	unsigned char* Y_buf = new unsigned char[1584 * (Frame_size - (int)round(Frame_size / intra_period))];
 	unsigned char* Reconstructed_buf = new unsigned char[YSize];
+	unsigned char* Reconstructed_U_buf = new unsigned char[USize];
+	unsigned char* Reconstructed_V_buf = new unsigned char[VSize];
 	unsigned char* MPM_buffer1 = new unsigned char[1584];
 	
 	int inter = 0;
@@ -1476,60 +1711,67 @@ int main() {
 	
 	for (int f = 0; f < 90; f++)
 	{
+		int* U_buffer = new int[USize];
+		int* V_buffer = new int[VSize];
+		int* U_buffer2 = new int[USize];
+		int* V_buffer2 = new int[VSize];
+		int* U_buffer3 = new int[USize];
+		int* V_buffer3 = new int[VSize];
+		int* U_buffer4 = new int[USize];
+		int* V_buffer4 = new int[VSize];
+		int* U_buffer5 = new int[USize];
+		int* V_buffer5 = new int[VSize];
 		int* buffer1 = new int[YSize];
 		int* buffer2 = new int[YSize];
 		int* buffer3 = new int[YSize];
 		int* buffer4 = new int[YSize];
 		int* buffer5 = new int[YSize];
-		int* buffer6 = new int[YSize];
-		int* buffer7 = new int[YSize];
-		int* buffer8 = new int[YSize];
-		int* buffer9 = new int[YSize];
+
 		unsigned char* X_buf1 = new unsigned char[1584];
 		unsigned char* Y_buf1 = new unsigned char[1584];
-		
-		////check MPM_buffer
-		//for (int k = 0; k < 1584 * 18; k++) {
-		//	if (k % 44 == 0) {
-		//		printf("\n");
-		//	}
-		//	if (k % 1584 == 0) {
-		//		printf("\n");
-		//	}
-		//	printf("%d ", MPM_buffer[k]);
-		//}
-		//printf("\n");
-		//printf("\n");
-		//check MPM_buffer
-
-		//for (int k = 0; k < 1584 * 72; k++) {
-		//	if (k % 44 == 0) {
-		//		printf("\n");
-		//	}
-		//	if (k % 1584 == 0) {
-		//		printf("\n");
-		//	}
-		//	printf("%d ", X_buf[k]);
-		//}
-		//printf("\n");
-		//printf("\n");
+		const int sel_Y = 0;
+		const int sel_UV = 1;
 		for (int i = 0; i < YSize; i++)
 		{
-			buffer1[i] = buffer0[i + (f * YSize)];
+			buffer1[i] = buffer0[i + (f * Size)];
 		}
+		for (int i = 0; i < USize; i++)
+		{
+			U_buffer[i] = buffer0[i + YSize + (f * Size)];
+		}
+		for (int i = 0; i < VSize; i++)
+		{
+			V_buffer[i] = buffer0[i + YSize + USize + (f * Size)];
+		}
+
 		if (f % intra_period == 0) {
 			for (int i = 0; i < 1584; i++)
 			{
-				MPM_buffer1[i] = MPM_buffer[i + (intra * 1584)];
+				MPM_buffer1[i] = MPM_buffer[i + (intra * total_macro)];
 			}
 			intra+= 1;
-			buffer2 = Reverse_Reordering(buffer1);
-			buffer3 = Reverse_DC_DPCM(buffer2);
-			
-			buffer4 = IDCT_DEQUANTI(buffer3);
-			buffer5 = Reverse_pixel_DPCM(buffer4, f);
-			Reconstructed_buf = Reverse_Intra_Prediction(buffer5, f, MPM_buffer1);
+			buffer2 = Reverse_Reordering(buffer1, sel_Y);
+			U_buffer2 = Reverse_Reordering(U_buffer, sel_UV);
+			V_buffer2 = Reverse_Reordering(V_buffer, sel_UV);
 
+			buffer3 = Reverse_DC_DPCM(buffer2, sel_Y);
+			U_buffer3 = Reverse_DC_DPCM(U_buffer2, sel_UV);
+			V_buffer3 = Reverse_DC_DPCM(V_buffer2, sel_UV);
+
+			buffer4 = IDCT_DEQUANTI(buffer3, sel_Y);
+			U_buffer4 = IDCT_DEQUANTI(U_buffer3, sel_UV);
+			V_buffer4 = IDCT_DEQUANTI(V_buffer3, sel_UV);
+
+			buffer5 = Reverse_pixel_DPCM(buffer4, f, sel_Y);
+			U_buffer5 = Reverse_pixel_DPCM(U_buffer4, f, sel_UV);
+			V_buffer5 = Reverse_pixel_DPCM(V_buffer4, f, sel_UV);
+
+			Reconstructed_buf = Reverse_Intra_Prediction(buffer5, f, MPM_buffer1);
+			for (int i = 0; i < USize; i++)
+			{
+				Reconstructed_U_buf[i] = (unsigned char)U_buffer5[i];
+				Reconstructed_V_buf[i] = (unsigned char)V_buffer5[i];
+			}
 		}
 		else {
 			for (int i = 0; i < 1584; i++)
@@ -1538,11 +1780,21 @@ int main() {
 				Y_buf1[i] = Y_buf[i + (inter * 1584)];
 			}
 			inter+= 1;
-			buffer6 = Reverse_Reordering(buffer1);
-			buffer7 = Reverse_DC_DPCM(buffer6);
+			buffer2 = Reverse_Reordering(buffer1, sel_Y);
+			U_buffer2 = Reverse_Reordering(U_buffer, sel_UV);
+			V_buffer2 = Reverse_Reordering(V_buffer, sel_UV);
+
+			buffer3 = Reverse_DC_DPCM(buffer2, sel_Y);
+			U_buffer3 = Reverse_DC_DPCM(U_buffer2, sel_UV);
+			V_buffer3 = Reverse_DC_DPCM(V_buffer2, sel_UV);
 			
-			buffer8 = IDCT_DEQUANTI(buffer7);
-			Reconstructed_buf = Reverse_Motion_Estimation(buffer8, Reconstructed_buf, X_buf1, Y_buf1);
+			buffer4 = IDCT_DEQUANTI(buffer3, sel_Y);
+			U_buffer4 = IDCT_DEQUANTI(U_buffer3, sel_UV);
+			V_buffer4 = IDCT_DEQUANTI(V_buffer3, sel_UV);
+
+			Reconstructed_buf = Reverse_Motion_Estimation(buffer4, Reconstructed_buf, X_buf1, Y_buf1, sel_Y);
+			Reconstructed_U_buf = Reverse_Motion_Estimation(U_buffer4, Reconstructed_U_buf, X_buf1, Y_buf1, sel_UV);
+			Reconstructed_V_buf = Reverse_Motion_Estimation(V_buffer4, Reconstructed_V_buf, X_buf1, Y_buf1, sel_UV);
 		}
 
 		//err2 = fopen_s(&picture2, "test(352X288)_90f.yuv", "a+b"); // wb대신에 a+b를 사용하는 이유는 파일을 이어쓰기 때문이다.
@@ -1562,6 +1814,22 @@ int main() {
 
 			fclose(picture3);
 		}
+		err3 = fopen_s(&picture3, "decode_Y_football_cif(352X288)_90f.yuv", "a+b"); // wb대신에 a+b를 사용하는 이유는 파일을 이어쓰기 때문이다.
+		if (err3 == 0) {
+			fseek(picture3, USize * f, SEEK_SET);
+
+			fwrite(Reconstructed_U_buf, 1, USize, picture3);
+
+			fclose(picture3);
+		}
+		err3 = fopen_s(&picture3, "decode_Y_football_cif(352X288)_90f.yuv", "a+b"); // wb대신에 a+b를 사용하는 이유는 파일을 이어쓰기 때문이다.
+		if (err3 == 0) {
+			fseek(picture3, VSize * f, SEEK_SET);
+
+			fwrite(Reconstructed_V_buf, 1, VSize, picture3);
+
+			fclose(picture3);
+		}
 		delete[] buffer2;
 		buffer2 = NULL;
 		/*delete[] buffer3;
@@ -1570,24 +1838,32 @@ int main() {
 		buffer4 = NULL;
 		delete[] buffer5;
 		buffer5 = NULL;
-		delete[] buffer6;
-		buffer6 = NULL;
-		/*delete[] buffer7;
-		buffer7 = NULL;*/
-		delete[] buffer8;
-		buffer8 = NULL;
+
 		delete[] X_buf1;
 		X_buf1 = NULL;
 		delete[] Y_buf1;
 		Y_buf1 = NULL;
-		//delete[] Reconstructed_buf;
-		//Reconstructed_buf = NULL;
+		delete[] U_buffer2;
+		U_buffer2 = NULL;
+		delete[] V_buffer2;
+		V_buffer2 = NULL;
+		/*delete[] U_buffer3;
+		U_buffer3 = NULL;
+		delete[] V_buffer3;
+		V_buffer3 = NULL;*/
+		delete[] U_buffer4;
+		U_buffer4 = NULL;
+		delete[] V_buffer4;
+		V_buffer4 = NULL;
 	}
 	/*delete[] X_buf;
 	delete[] Y_buf;
 	delete[] X_buf1;
 	delete[] Y_buf1;*/
-	Reconstructed_buf = NULL;
+	delete[] Reconstructed_U_buf;
+	Reconstructed_U_buf = NULL;
+	delete[] Reconstructed_V_buf;
+	Reconstructed_V_buf = NULL;
 	delete[] Reconstructed_buf;
 	Reconstructed_buf = NULL;
 	delete[] MPM_buffer;
