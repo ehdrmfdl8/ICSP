@@ -1,9 +1,8 @@
 ﻿  decoder.cpp
-C:\Users\ICSP\source\repos\ICSP\decoder\decoder\decoder.cpp(1091,39): warning C4244: '=': 'double'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-C:\Users\ICSP\source\repos\ICSP\decoder\decoder\decoder.cpp(1104,39): warning C4244: '=': 'double'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-C:\Users\ICSP\source\repos\ICSP\decoder\decoder\decoder.cpp(1118,39): warning C4244: '=': 'double'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-C:\Users\ICSP\source\repos\ICSP\decoder\decoder\decoder.cpp(1680,8): warning C4101: 'picture2' :참조되지 않은 지역 변수입니다.
-C:\Users\ICSP\source\repos\ICSP\decoder\decoder\decoder.cpp(1682,8): warning C4101: 'picture4' :참조되지 않은 지역 변수입니다.
-C:\Users\ICSP\source\repos\ICSP\decoder\decoder\decoder.cpp(1678,15): warning C4101: 'err2' :참조되지 않은 지역 변수입니다.
-C:\Users\ICSP\source\repos\ICSP\decoder\decoder\decoder.cpp(1678,27): warning C4101: 'err4' :참조되지 않은 지역 변수입니다.
-  decoder.vcxproj -> C:\Users\ICSP\source\repos\ICSP\decoder\Debug\decoder.exe
+C:\Users\ICSP\source\repos\ICSP\decoder\decoder\decoder.cpp(1186,39): warning C4244: '=': 'double'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+C:\Users\ICSP\source\repos\ICSP\decoder\decoder\decoder.cpp(1199,39): warning C4244: '=': 'double'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+C:\Users\ICSP\source\repos\ICSP\decoder\decoder\decoder.cpp(1213,39): warning C4244: '=': 'double'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+C:\Users\ICSP\source\repos\ICSP\decoder\decoder\decoder.cpp(1780,8): warning C4101: 'picture2' :참조되지 않은 지역 변수입니다.
+C:\Users\ICSP\source\repos\ICSP\decoder\decoder\decoder.cpp(1782,8): warning C4101: 'picture4' :참조되지 않은 지역 변수입니다.
+C:\Users\ICSP\source\repos\ICSP\decoder\decoder\decoder.cpp(1778,15): warning C4101: 'err2' :참조되지 않은 지역 변수입니다.
+C:\Users\ICSP\source\repos\ICSP\decoder\decoder\decoder.cpp(1778,27): warning C4101: 'err4' :참조되지 않은 지역 변수입니다.

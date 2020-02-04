@@ -1,0 +1,1 @@
+‪ICSP_encoder.exe 90 1 1 5 0 1 ‪C:\Users\ICSP\source\repos\ICSP\ICSP_encoder\ICSP_encoder\football_cif(352X288)_90f.yuv

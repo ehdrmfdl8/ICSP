@@ -17,11 +17,19 @@ const long total_macro = 1584;
 const long USize = Width * Height * 1 / 4;
 const long VSize = Width * Height * 1 / 4;
 
-const int QP_DC = 1;//2~32
-const int QP_AC = 1;//2~64
-const int intra_period = 5; //0~31
-const int pixel_dpcm_select = 0;
-const int Frame_size = 90;
+int QP_DC = 8;//2~32
+int QP_AC = 1;//2~64
+int intra_period = 10; //0~31
+int pixel_dpcm_flag = 0; //0 -> mean, 1-> upper, 2->left, 3-> disable
+int intra_prediction_flag = 1; // 1 -> enable, 0 -> disable 
+int Frame = 360;
+
+int* ptr_QP_AC = &QP_DC;
+int* ptr_intra_period = &QP_AC;
+int* ptr_pixel_dpcm_flag = &pixel_dpcm_flag;
+int* ptr_intra_prediction_flag = &intra_prediction_flag;
+int* ptr_Frame = &Frame;
+
 int getAbit(unsigned int, int);
 
 //역 인트라
@@ -35,7 +43,7 @@ int** Reverse_DPCM_Mode1(int matrix[8][8], int, int*, int*, int);
 int** Reverse_DPCM_Mode2(int matrix[8][8], int, int*, int*, int);
 int* Reverse_pixel_DPCM(int*, int, int);
 //엔트로피 디코딩
-int* entropy_decoding(unsigned int* ,int, unsigned char*, unsigned char*, unsigned char*);
+int* entropy_decoding(unsigned int*, int, unsigned char*, unsigned char*, unsigned char*, int*, int*, int*, int*, int*, int*);
 //역 인터
 unsigned char* Reverse_Motion_Estimation(int*, unsigned char*, unsigned char*, unsigned char*, int);
 //역 양자화
@@ -347,7 +355,8 @@ int getAbit(unsigned int x, int n) { // getbit()
 	return (x & (1 << (31 - n))) >> (31 - n);
 }
 
-int* entropy_decoding(unsigned int* decode_buffer ,int fileLength, unsigned char* MPM_buffer_, unsigned char* x_buf, unsigned char* y_buf) {
+int* entropy_decoding(unsigned int* decode_buffer ,int fileLength, unsigned char* MPM_buffer_, unsigned char* x_buf, unsigned char* y_buf,
+	int* QP_DC, int* QP_AC, int* pixel_dpcm_flag, int* intra_period, int* intra_prediction_flag, int* Frame) {
 	int sel = 0;
 	int _Width = 0;
 	int _Height = 0;
@@ -371,12 +380,20 @@ int* entropy_decoding(unsigned int* decode_buffer ,int fileLength, unsigned char
 		_macro_Wsize = 22;
 		_macro_Hsize = 18;
 	}
-	int* new_buffer = new int[Size * 90]; // 프레임 정하기
+	//read header 24bit
+	*QP_DC = (decode_buffer[1] & (0xff << 16)) >> 16;
+	*QP_AC = (decode_buffer[1] & (0xff << 8)) >> 8;
+	*pixel_dpcm_flag = (decode_buffer[1] & (0xff << 0)) >> 0;
+	*intra_period = (decode_buffer[2] & (0xff << 24)) >> 24;
+	*intra_prediction_flag = (decode_buffer[2] & (0xff << 16)) >> 16;
+	*Frame = (decode_buffer[2] & (0xff << 8)) >> 8;
+
+	int* new_buffer = new int[Size * *Frame]; // 프레임 정하기
 	int num;
-	num = (int)(Frame_size / intra_period);
+	num = (int)(*Frame / *intra_period);
 	unsigned char* MPM_buffer = new unsigned char[1584 * num];
-	unsigned char* X_buffer = new unsigned char[1584 * (Frame_size - num)];
-	unsigned char* Y_buffer = new unsigned char[1584 * (Frame_size - num)];
+	unsigned char* X_buffer = new unsigned char[1584 * (*Frame - num)];
+	unsigned char* Y_buffer = new unsigned char[1584 * (*Frame - num)];
 	int matrix[8][8] = { 0, };
 	
 	//inter
@@ -404,7 +421,7 @@ int* entropy_decoding(unsigned int* decode_buffer ,int fileLength, unsigned char
 	int x = 0;
 	int n; // size of int = 32bit
 	// flag type
-	int MPM_flag = 1;
+	int MPM_flag = 0;
 	int code_flag = 0;
 	int sign_flag = 0;
 	int data_flag = 0;
@@ -416,11 +433,21 @@ int* entropy_decoding(unsigned int* decode_buffer ,int fileLength, unsigned char
 	int f = 0; // frame count
 	int z = 0; // MPM_buffer index
 	int p = 0; //inter_buffer index
+	int readheader = 0;
 	MPM_buffer = MPM_buffer_;
 	X_buffer = x_buf;
 	Y_buffer = y_buf;
+	
+	if (*intra_prediction_flag == 1) {
+		MPM_flag = 1;
+		code_flag = 0;
+	}
+	else {
+		MPM_flag = 0;
+		code_flag = 1;
+	}
 
-	for (int m = 0; m < (fileLength / 4) ; m++)
+	for (int m = 3; m < (fileLength / 4) ; m++)
 	{
 		n = 0;
 		while (n < 32) {
@@ -428,7 +455,7 @@ int* entropy_decoding(unsigned int* decode_buffer ,int fileLength, unsigned char
 			if (y == 7 && x == 8) {
 				y = 0;
 				x = 0;
-				if (f % intra_period == 0 && sel == 0) {//Y일때
+				if (f % *intra_period == 0 && sel == 0 && *intra_prediction_flag == 1) {//Y일때
 					if (MPMword > 2 ||  MPMword < 0) {
 						printf("MPM_error");
 					}
@@ -439,7 +466,7 @@ int* entropy_decoding(unsigned int* decode_buffer ,int fileLength, unsigned char
 					code_flag = 0;
 					data_flag = 0;
 				}
-				else if(f % intra_period != 0 && sel == 0){//Y일때
+				else if(f % *intra_period != 0 && sel == 0){//Y일때
 					if (X_bufword > 15 || Y_bufword > 15 || Y_bufword < 0 || X_bufword < 0) {
 						printf("XY_buf_error");
 					}
@@ -486,12 +513,22 @@ int* entropy_decoding(unsigned int* decode_buffer ,int fileLength, unsigned char
 					block_X = 0;
 					block_Y = 0;	
 					if (sel == 0) {
-						if (f % intra_period == 0) {
+						if (f % *intra_period == 0) {
 							X_flag = 0;
-							MPM_flag = 1;
+							if (*intra_prediction_flag == 1) {
+								MPM_flag = 1;
+							}
+							else {
+								code_flag = 1;
+							}
 						}
 						else {
-							MPM_flag = 0;
+							if (*intra_prediction_flag == 1) {
+								MPM_flag = 0;
+							}
+							else {
+								code_flag = 0;
+							}
 							X_flag = 1;
 						}
 					}
@@ -509,12 +546,23 @@ int* entropy_decoding(unsigned int* decode_buffer ,int fileLength, unsigned char
 						_macro_size = total_macro;
 						_macro_Wsize = 44;
 						_macro_Hsize = 36;
-						if (f % intra_period == 0) {
+						if (f % *intra_period == 0) {
 							X_flag = 0;
-							MPM_flag = 1;
+							if (*intra_prediction_flag == 1) {
+								MPM_flag = 1;
+							}
+							else {
+								code_flag = 1;
+							}
+							
 						}
 						else {
-							MPM_flag = 0;
+							if (*intra_prediction_flag == 1) {
+								MPM_flag = 0;
+							}
+							else {
+								code_flag = 0;
+							}
 							X_flag = 1;
 						}
 					}
@@ -540,7 +588,7 @@ int* entropy_decoding(unsigned int* decode_buffer ,int fileLength, unsigned char
 				x = 0;
 			}
 			//MPM & X,Y flag
-			if (MPM_flag == 1 && sel == 0) {
+			if (MPM_flag == 1 && sel == 0 && *intra_prediction_flag == 1) {
 				bit = getAbit(decode_buffer[m], n);
 				n++;
 				MPMword = (MPMword << 1) + bit;
@@ -683,7 +731,21 @@ int* entropy_decoding(unsigned int* decode_buffer ,int fileLength, unsigned char
 					sign_flag = 1;
 					code_flag = 0;
 				}
-				else if (codeword > 4094 || codeword_len > 12) {
+				else if (codeword == 4094 || codeword_len == 12) {
+					category = 14;
+					codeword_len = 0;
+					codeword = 0;
+					sign_flag = 1;
+					code_flag = 0;
+				}
+				else if (codeword == 8190 || codeword_len == 13) {
+					category = 15;
+					codeword_len = 0;
+					codeword = 0;
+					sign_flag = 1;
+					code_flag = 0;
+				}
+				else if (codeword > 8190 || codeword_len == 14) {
 					printf("error");
 				}
 			}
@@ -906,6 +968,38 @@ int* entropy_decoding(unsigned int* decode_buffer ,int fileLength, unsigned char
 						code_flag = 1;
 					}
 					break;
+				case 14:
+					data_bit = getAbit(decode_buffer[m], n);
+					n++;
+					dataword = (dataword << 1) + data_bit;
+					data_len++;
+					min_val = 8192;
+					if (data_len == 13) {
+						dataword += min_val;
+						matrix[y][x] = sign * dataword;
+						x++;
+						dataword = 0;
+						data_len = 0;
+						data_flag = 0;
+						code_flag = 1;
+					}
+					break;
+				case 15:
+					data_bit = getAbit(decode_buffer[m], n);
+					n++;
+					dataword = (dataword << 1) + data_bit;
+					data_len++;
+					min_val = 16384;
+					if (data_len == 14) {
+						dataword += min_val;
+						matrix[y][x] = sign * dataword;
+						x++;
+						dataword = 0;
+						data_len = 0;
+						data_flag = 0;
+						code_flag = 1;
+					}
+					break;
 				default:
 					printf("error");
 					break;
@@ -1012,6 +1106,7 @@ unsigned char* Reverse_Motion_Estimation(int* cur_buffer, unsigned char* rec_buf
 		_macro_size = total_macro / 4;
 		_macro_Wsize = 22;
 	}
+
 	unsigned char* new_buffer = new unsigned char[YSize];
 	unsigned char cur_matrix[8][8] = { 0, };
 	unsigned char rec_matrix[8][8] = { 0, };
@@ -1219,22 +1314,9 @@ unsigned char* Reverse_Intra_Prediction(int* buffer, int f, unsigned char* MPM_b
 		{
 			for (int j = 0; j < 8; j++)
 			{
-				//printf("%d ", buffer[Width * (i + 8 * n) + j + 8 * m]);
 				matrix[i][j] = buffer[Width * (i + 8 * n) + j + 8 * m];
 			}
-			//printf("\n");
 		}
-		//printf("\n");
-
-		/*for (int i = 0; i < 8; i++)
-		{
-			for (int j = 0; j < 8; j++)
-			{
-				printf("%d ", MODE0_matrix[i][j]);
-			}
-			printf("\n");
-		}*/
-
 
 		//-----------------DPCM select------------------------------------
 		int select = 0;
@@ -1612,7 +1694,7 @@ int* Reverse_pixel_DPCM(int* buffer, int f, int sel) {
 				matrix[i][j] = buffer[_Width * (i + 8 * n) + j + 8 * m];
 			}
 		}
-		switch (pixel_dpcm_select)
+		switch (pixel_dpcm_flag)
 		{
 		case 0: MODE0_matrix = Reverse_DPCM_Mode0(matrix, k, V_reference_buffer, H_reference_buffer, sel);
 			for (int r = 0; r < 8; r++)
@@ -1624,6 +1706,12 @@ int* Reverse_pixel_DPCM(int* buffer, int f, int sel) {
 			{
 				for (int j = 0; j < 8; j++)
 				{
+					if (MODE0_matrix[i][j] >= 255) {
+						MODE0_matrix[i][j] = 255;
+					}
+					else if (MODE0_matrix[i][j] <= 0) {
+						MODE0_matrix[i][j] = 0;
+					}
 					new_buffer[_Width * (i + 8 * n) + j + 8 * m] = MODE0_matrix[i][j];
 				}
 			}
@@ -1638,6 +1726,12 @@ int* Reverse_pixel_DPCM(int* buffer, int f, int sel) {
 			{
 				for (int j = 0; j < 8; j++)
 				{
+					if (MODE1_matrix[i][j] >= 255) {
+						MODE1_matrix[i][j] = 255;
+					}
+					else if (MODE1_matrix[i][j] <= 0) {
+						MODE1_matrix[i][j] = 0;
+					}
 					new_buffer[_Width * (i + 8 * n) + j + 8 * m] = MODE1_matrix[i][j];
 				}
 			}
@@ -1652,6 +1746,12 @@ int* Reverse_pixel_DPCM(int* buffer, int f, int sel) {
 			{
 				for (int j = 0; j < 8; j++)
 				{
+					if (MODE2_matrix[i][j] >= 255) {
+						MODE2_matrix[i][j] = 255;
+					}
+					else if (MODE2_matrix[i][j] <= 0) {
+						MODE2_matrix[i][j] = 0;
+					}
 					new_buffer[_Width * (i + 8 * n) + j + 8 * m] = MODE2_matrix[i][j];
 				}
 			}
@@ -1681,11 +1781,10 @@ int main() {
 	FILE* picture3;
 	FILE* picture4;
 
-	int* Frame = 0;
-	int* buffer0 = new int[Size * Frame_size];
-	unsigned char* MPM_buffer = new unsigned char[1584 * (int)round(Frame_size / intra_period)];
-	unsigned char* X_buf = new unsigned char[1584 * (Frame_size - (int)round(Frame_size / intra_period))];
-	unsigned char* Y_buf = new unsigned char[1584 * (Frame_size - (int)round(Frame_size / intra_period))];
+	int* buffer0 = new int[Size * Frame];
+	unsigned char* MPM_buffer = new unsigned char[1584 * (int)round(Frame / intra_period)];
+	unsigned char* X_buf = new unsigned char[1584 * (Frame - (int)round(Frame / intra_period))];
+	unsigned char* Y_buf = new unsigned char[1584 * (Frame - (int)round(Frame / intra_period))];
 	unsigned char* Reconstructed_buf = new unsigned char[YSize];
 	unsigned char* Reconstructed_U_buf = new unsigned char[USize];
 	unsigned char* Reconstructed_V_buf = new unsigned char[VSize];
@@ -1705,11 +1804,11 @@ int main() {
 		//{
 		//	printf("%X ", decode_buffer[i]); //제대로 받음
 		//}
-		buffer0 = entropy_decoding(decode_buffer, fileLength, MPM_buffer, X_buf, Y_buf);
+		buffer0 = entropy_decoding(decode_buffer, fileLength, MPM_buffer, X_buf, Y_buf, &QP_DC, &QP_AC, &pixel_dpcm_flag, &intra_period, &intra_prediction_flag, &Frame);
 		delete[] decode_buffer;
 	}
 	
-	for (int f = 0; f < 90; f++)
+	for (int f = 0; f < Frame; f++)
 	{
 		int* U_buffer = new int[USize];
 		int* V_buffer = new int[VSize];
@@ -1745,11 +1844,13 @@ int main() {
 		}
 
 		if (f % intra_period == 0) {
-			for (int i = 0; i < 1584; i++)
-			{
-				MPM_buffer1[i] = MPM_buffer[i + (intra * total_macro)];
+			if (intra_prediction_flag == 1) {
+				for (int i = 0; i < 1584; i++)
+				{
+					MPM_buffer1[i] = MPM_buffer[i + (intra * total_macro)];
+				}
+				intra += 1;
 			}
-			intra+= 1;
 			buffer2 = Reverse_Reordering(buffer1, sel_Y);
 			U_buffer2 = Reverse_Reordering(U_buffer, sel_UV);
 			V_buffer2 = Reverse_Reordering(V_buffer, sel_UV);
@@ -1765,8 +1866,15 @@ int main() {
 			buffer5 = Reverse_pixel_DPCM(buffer4, f, sel_Y);
 			U_buffer5 = Reverse_pixel_DPCM(U_buffer4, f, sel_UV);
 			V_buffer5 = Reverse_pixel_DPCM(V_buffer4, f, sel_UV);
-
-			Reconstructed_buf = Reverse_Intra_Prediction(buffer5, f, MPM_buffer1);
+			if (intra_prediction_flag == 1) {
+				Reconstructed_buf = Reverse_Intra_Prediction(buffer5, f, MPM_buffer1);
+			}
+			else {
+				for (int i = 0; i < YSize; i++)
+				{
+					Reconstructed_buf[i] = (unsigned char)buffer5[i];
+				}
+			}
 			for (int i = 0; i < USize; i++)
 			{
 				Reconstructed_U_buf[i] = (unsigned char)U_buffer5[i];

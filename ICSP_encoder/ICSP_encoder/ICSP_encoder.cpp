@@ -16,10 +16,12 @@ const long MPM_BUF_Size = 1584;
 const long total_macro = 1584;
 const long USize = Width * Height * 1 / 4;
 const long VSize = Width * Height * 1 / 4;
-const int QP_DC = 1;//2~32
-const int QP_AC = 1;//2~64
-const int intra_period = 5; //0~31
-const int pixel_dpcm_select = 0;
+int QP_DC = 8;//2~32
+int QP_AC = 4;//2~64
+int intra_period = 10; //0~31
+int pixel_dpcm_flag = 1; //0 -> mean, 1-> upper, 2->left, 3-> disable
+int intra_prediction_flag = 0; // 1 -> enable, 0 -> disable 
+int Frame = 90;
 //인트라
 int** Intra_Mode0(int matrix[8][8], int, int*, int*);
 int** Intra_Mode1(int matrix[8][8], int, int*, int*);
@@ -58,14 +60,14 @@ int** BDCT(double**);
 int* DC_DPCM(int*, int);
 int** DPCM_Mode1(int **, int);
 //zigzag scan
-int* Reordering_entorpy_intra(int*, int*, unsigned char*, int);
+int* Reordering_entorpy_intra(int*, int*, unsigned char*, int, int);
 int* Reordering_entorpy_inter(int*, int*, unsigned char*, unsigned char*, int);
 int** ZigZag_Scan(int matrix[8][8]);
 
 int* DCT_QUANTI(int*, int);
 int* IDCT_DEQUANTI(int*, int);
 //엔트로피
-int* entropy_encoding_intra(int**, int*, int*, int, int);
+int* entropy_encoding_intra(int**, int*, int*, int, int, int);
 int* entropy_encoding_inter(int**, int*, int*, int, int, int);
 
 int** DPCM_Mode1(int** matrix, int sel) {
@@ -180,7 +182,7 @@ int* DC_DPCM(int* buffer, int sel) {
 	return new_buffer;
 }
 
-int* Reordering_entorpy_intra(int* buffer,int* buffer_stack, unsigned char* MPM_buffer, int sel) {
+int* Reordering_entorpy_intra(int* buffer,int* buffer_stack, unsigned char* MPM_buffer, int sel, int intra_prediction_flag) {
 	int _Width = 0;
 	int _Size = 0;
 	int _macro_size = 0;
@@ -245,7 +247,7 @@ int* Reordering_entorpy_intra(int* buffer,int* buffer_stack, unsigned char* MPM_
 		//	}
 		//	printf("\n");
 		//}
-		encoding_buffer1 = entropy_encoding_intra(reorder_matrix, buffer_index, buffer_stack, MPM_buf[k], sel);
+		encoding_buffer1 = entropy_encoding_intra(reorder_matrix, buffer_index, buffer_stack, MPM_buf[k], sel, intra_prediction_flag);
 		memcpy(encoding_buffer + (*buffer_stack - *buffer_index), encoding_buffer1, sizeof(int) * (*buffer_index));
 		//for (int i = 0; i < 8; i++)
 		//{
@@ -350,6 +352,7 @@ int* Reordering_entorpy_inter(int* buffer, int* buffer_stack, unsigned char* X_b
 	//return new_buffer;
 	return encoding_buffer;
 }
+
 int** ZigZag_Scan(int matrix[8][8]) {
 	int* buffer = new int[64];
 	int* new_buffer = new int[64];
@@ -945,7 +948,7 @@ int* pixel_DPCM(int* buffer, int f, int sel) {
 				matrix[i][j] = buffer[_Width * (i + 8 * n) + j + 8 * m];
 			}
 		}
-		switch (pixel_dpcm_select)
+		switch (pixel_dpcm_flag)
 		{
 		case 0: MODE0_matrix = DPCM_Mode0(matrix, k, V_reference_buffer, H_reference_buffer, sel);
 			for (int i = 0; i < 8; i++)
@@ -1489,7 +1492,8 @@ unsigned char* Reverse_Intra_Prediction(int* buffer, int f, unsigned char* MPM_b
 	for (int i = 0; i < 8; i++)
 		delete[] MODE2_matrix[i];
 	delete[] MODE2_matrix;
-
+	delete[] V_reference_buffer;
+	delete[] H_reference_buffer;
 	return new_buffer;
 }
 
@@ -1785,7 +1789,7 @@ int* Reverse_pixel_DPCM(int* buffer, int f, int sel) {
 				matrix[i][j] = buffer[_Width * (i + 8 * n) + j + 8 * m];
 			}
 		}
-		switch (pixel_dpcm_select)
+		switch (pixel_dpcm_flag)
 		{
 		case 0: MODE0_matrix = Reverse_DPCM_Mode0(matrix, k, V_reference_buffer, H_reference_buffer, sel);
 				for (int r = 0; r < 8; r++)
@@ -1797,6 +1801,12 @@ int* Reverse_pixel_DPCM(int* buffer, int f, int sel) {
 				{
 					for (int j = 0; j < 8; j++)
 					{
+						/*if (MODE0_matrix[i][j] >= 255) {
+							MODE0_matrix[i][j] = 255;
+						}
+						else if (MODE0_matrix[i][j] <= 0) {
+							MODE0_matrix[i][j] = 0;
+						}*/
 						new_buffer[_Width * (i + 8 * n) + j + 8 * m] = MODE0_matrix[i][j];
 					}
 				}
@@ -1811,6 +1821,12 @@ int* Reverse_pixel_DPCM(int* buffer, int f, int sel) {
 				{
 					for (int j = 0; j < 8; j++)
 					{
+						/*if (MODE1_matrix[i][j] >= 255) {
+							MODE1_matrix[i][j] = 255;
+						}
+						else if (MODE1_matrix[i][j] <= 0) {
+							MODE1_matrix[i][j] = 0;
+						}*/
 						new_buffer[_Width * (i + 8 * n) + j + 8 * m] = MODE1_matrix[i][j];
 					}
 				}
@@ -1825,6 +1841,12 @@ int* Reverse_pixel_DPCM(int* buffer, int f, int sel) {
 				{
 					for (int j = 0; j < 8; j++)
 					{
+						/*if (MODE2_matrix[i][j] >= 255) {
+							MODE2_matrix[i][j] = 255;
+						}
+						else if (MODE2_matrix[i][j] <= 0) {
+							MODE2_matrix[i][j] = 0;
+						}*/
 						new_buffer[_Width * (i + 8 * n) + j + 8 * m] = MODE2_matrix[i][j];
 					}
 				}
@@ -2027,20 +2049,20 @@ unsigned char* Reverse_Motion_Estimation(int* cur_buffer, unsigned char* rec_buf
 	return new_buffer;
 }
 
-int* entropy_encoding_intra(int** buffer,int* buffer_index,int* buffer_stack, int MPM_buf, int sel) {
+int* entropy_encoding_intra(int** buffer,int* buffer_index,int* buffer_stack, int MPM_buf, int sel,int intra_prediction_flag) {
 	//int* new_buffer = new int[64];
 	int* new_buffer;
 	new_buffer = (int*)malloc(sizeof(int) * 64);
 	int k = 0; // total_length support for using shift
-	int n = 0; 
-	int m = 0; // MPM 2bit
+	int n = 0; // index of buffer
+	int m = 0; // int index bit
 	int total_length;
 	int min_val;
 	int range_size;
 	int range = 0;
 	int mask = 0;
 	int over_mask = 0;
-	if (sel == 0) {
+	if (sel == 0 && intra_prediction_flag == 1) {
 		//write MPM_buf 2bit
 		new_buffer[n] = new_buffer[n] << 2;
 		new_buffer[n] = new_buffer[n] | MPM_buf;
@@ -2868,8 +2890,49 @@ int* entropy_encoding_inter(int** buffer, int* buffer_index, int* buffer_stack, 
 	buffer_stack[0] += n;
 	return new_buffer;
 }
+int* encoding_header(int* buffer,int QP_DC, int QP_AC, int pixel_dpcm_flag, int intra_period, int intra_prediction_flag, int Frame) {
+	int* new_buffer = new int[3];
+	new_buffer = buffer;
+	//start of zero
+	new_buffer[0] = new_buffer[0] << 8;
+	new_buffer[0] = new_buffer[0] & 0;
+	// I
+	new_buffer[0] = new_buffer[0] << 8;
+	new_buffer[0] = new_buffer[0] | 0x49;
+	// C
+	new_buffer[0] = new_buffer[0] << 8;
+	new_buffer[0] = new_buffer[0] | 0x43;
+	// S
+	new_buffer[0] = new_buffer[0] << 8;
+	new_buffer[0] = new_buffer[0] | 0x53;
+	// P
+	new_buffer[1] = new_buffer[1] << 8;
+	new_buffer[1] = new_buffer[1] | 0x50;
+	// QP_DC
+	new_buffer[1] = new_buffer[1] << 8;
+	new_buffer[1] = new_buffer[1] | QP_DC;
+	//QP_AC
+	new_buffer[1] = new_buffer[1] << 8;
+	new_buffer[1] = new_buffer[1] | QP_AC;
+	//pixel_dpcm
+	new_buffer[1] = new_buffer[1] << 8;
+	new_buffer[1] = new_buffer[1] | pixel_dpcm_flag;
+	// intra_period
+	new_buffer[2] = new_buffer[2] << 8;
+	new_buffer[2] = new_buffer[2] | intra_period;
+	// intra_prediction_flag
+	new_buffer[2] = new_buffer[2] << 8;
+	new_buffer[2] = new_buffer[2] | intra_prediction_flag;
+	//frame
+	new_buffer[2] = new_buffer[2] << 8;
+	new_buffer[2] = new_buffer[2] | Frame;
+	//end
+	new_buffer[2] = new_buffer[2] << 8;
+	//new_buffer[2] = new_buffer[2] & 0;
 
-int main() {
+	return new_buffer;
+}
+int main(int argc, char *argv[]) {
 	errno_t err, err2, err3, err4, err5;
 	FILE* picture;
 	FILE* picture2;
@@ -2877,19 +2940,39 @@ int main() {
 	FILE* picture4;
 	FILE* picture5;
 
-	int Frame = 0;
-	err = fopen_s(&picture, "football_cif(352X288)_90f.yuv", "rb");
-	if (err == 0) {
-		fseek(picture, 0, SEEK_END);
-		int fileLength = ftell(picture);
-		Frame = fileLength / Size;
-	}
+	//bat file 사용하기
+	Frame = atoi(argv[1]);
+	QP_DC = atoi(argv[2]);
+	QP_AC = atoi(argv[3]);
+	intra_period = atoi(argv[4]);
+	pixel_dpcm_flag = atoi(argv[5]);
+	intra_prediction_flag = atoi(argv[6]);
+	//int Frame = 0;
+	//err = fopen_s(&picture, "football_cif(352X288)_90f.yuv", "rb");
+	//if (err == 0) {
+	//	fseek(picture, 0, SEEK_END);
+	//	int fileLength = ftell(picture);
+	//	Frame = fileLength / Size;
+	//}
 	unsigned char* Reconstructed_buf = new unsigned char[YSize];
 	unsigned char* Reconstructed_U_buf = new unsigned char[USize];
 	unsigned char* Reconstructed_V_buf = new unsigned char[VSize];
 	int* encode_buffer2 = new int[YSize];
 	int* encode_U_buffer2 = new int[USize];
 	int* encode_V_buffer2 = new int[VSize];
+	int* header_buffer = new int[3];
+	int* encode_header_buffer = new int[3];
+	
+	encode_header_buffer = encoding_header(header_buffer, QP_DC, QP_AC, pixel_dpcm_flag, intra_period, intra_prediction_flag, Frame);
+
+	err2 = fopen_s(&picture2, "encode_Y_football_cif(352X288)_90f.yuv", "a+b"); // wb대신에 a+b를 사용하는 이유는 파일을 이어쓰기 때문이다.
+	if (err2 == 0) {
+		fseek(picture2, 0, SEEK_SET);
+		fwrite(encode_header_buffer, 4, 3, picture2);
+		fclose(picture2);
+	}
+
+
 	for (int f = 0; f < Frame; f++)
 	{
 		unsigned char* buffer = new unsigned char[Size];
@@ -2912,11 +2995,9 @@ int main() {
 		int* encode_V_buffer1 = new int[VSize];
 		int* buffer6 = new int[YSize];
 		int* buffer7 = new int[YSize];
-		//unsigned char* Reconstructed_buf = new unsigned char[YSize];
 		unsigned char* MPM_buffer = new unsigned char[36 * 44];
 		unsigned char* X_buf = new unsigned char[36 * 44];
 		unsigned char* Y_buf = new unsigned char[36 * 44];
-		//unsigned char* IncludeMPM_buffer = new unsigned char[YSize + MPM_BUF_Size];
 		int b = 0;
 		int c = 0;
 		int d = 0;
@@ -2945,8 +3026,12 @@ int main() {
 				V_buffer[i] = (int)buffer[i + YSize + USize];
 			}
 			if (f % intra_period == 0) { //f % intra_period == 0 인트라 인코딩
-				buffer3 = Intra_Prediction(buffer2, f, MPM_buffer);
-
+				if (intra_prediction_flag == 1) {
+					buffer3 = Intra_Prediction(buffer2, f, MPM_buffer);
+				}
+				else {
+					buffer3 = buffer2;
+				}
 				buffer4 = pixel_DPCM(buffer3, f, sel_Y);
 				U_buffer2 = pixel_DPCM(U_buffer, f, sel_UV);
 				V_buffer2 = pixel_DPCM(V_buffer, f, sel_UV);
@@ -2959,9 +3044,9 @@ int main() {
 				encode_U_buffer1 = DC_DPCM(U_buffer3, sel_UV);
 				encode_V_buffer1 = DC_DPCM(V_buffer3, sel_UV);
 
-				encode_buffer2 = Reordering_entorpy_intra(encode_buffer1, buffer_stack, MPM_buffer, sel_Y);
-				encode_U_buffer2 = Reordering_entorpy_intra(encode_U_buffer1, U_buffer_stack, MPM_buffer, sel_UV);
-				encode_V_buffer2 = Reordering_entorpy_intra(encode_V_buffer1, V_buffer_stack, MPM_buffer, sel_UV);
+				encode_buffer2 = Reordering_entorpy_intra(encode_buffer1, buffer_stack, MPM_buffer, sel_Y, intra_prediction_flag);
+				encode_U_buffer2 = Reordering_entorpy_intra(encode_U_buffer1, U_buffer_stack, MPM_buffer, sel_UV, intra_prediction_flag);
+				encode_V_buffer2 = Reordering_entorpy_intra(encode_V_buffer1, V_buffer_stack, MPM_buffer, sel_UV, intra_prediction_flag);
 
 				realloc(encode_buffer2, sizeof(int) * (*buffer_stack));
 				realloc(encode_U_buffer2, sizeof(int) * (*U_buffer_stack));
@@ -2974,8 +3059,15 @@ int main() {
 				buffer7 = Reverse_pixel_DPCM(buffer6, f, sel_Y);
 				U_buffer5 = Reverse_pixel_DPCM(U_buffer4, f, sel_UV);
 				V_buffer5 = Reverse_pixel_DPCM(V_buffer4, f, sel_UV);
-
-				Reconstructed_buf = Reverse_Intra_Prediction(buffer7, f, MPM_buffer);
+				if (intra_prediction_flag == 1) {
+					Reconstructed_buf = Reverse_Intra_Prediction(buffer7, f, MPM_buffer);
+				}
+				else {
+					for (int i = 0; i < YSize; i++)
+					{
+						Reconstructed_buf[i] = (unsigned char)buffer7[i];
+					}
+				}
 				for (int i = 0; i < USize; i++)
 				{
 					Reconstructed_U_buf[i] = (unsigned char)U_buffer5[i];
@@ -3019,23 +3111,23 @@ int main() {
 
 		err2 = fopen_s(&picture2, "encode_Y_football_cif(352X288)_90f.yuv", "a+b"); // wb대신에 a+b를 사용하는 이유는 파일을 이어쓰기 때문이다.
 		if (err2 == 0) {
-			fseek(picture2, *buffer_stack * f, SEEK_SET);
+			fseek(picture2, *buffer_stack * f+3, SEEK_SET);
 			fwrite(encode_buffer2, 4, *buffer_stack, picture2);
 			fclose(picture2);
 		}
 		err2 = fopen_s(&picture2, "encode_Y_football_cif(352X288)_90f.yuv", "a+b"); // wb대신에 a+b를 사용하는 이유는 파일을 이어쓰기 때문이다.
 		if (err2 == 0) {
-			fseek(picture2, *U_buffer_stack * f, SEEK_SET);
+			fseek(picture2, *U_buffer_stack * f+3, SEEK_SET);
 			fwrite(encode_U_buffer2, 4, *U_buffer_stack, picture2);
 			/*for (int i = 0; i < *U_buffer_stack; i++)
 			{
 				printf("%X ", encode_U_buffer2[i]);
-			}
-			fclose(picture2);*/
+			}*/
+			fclose(picture2);
 		}
 		err2 = fopen_s(&picture2, "encode_Y_football_cif(352X288)_90f.yuv", "a+b"); // wb대신에 a+b를 사용하는 이유는 파일을 이어쓰기 때문이다.
 		if (err2 == 0) {
-			fseek(picture2, *V_buffer_stack * f, SEEK_SET);
+			fseek(picture2, *V_buffer_stack * f+3, SEEK_SET);
 			fwrite(encode_V_buffer2, 4, *V_buffer_stack, picture2);
 			fclose(picture2);
 		}
@@ -3062,8 +3154,10 @@ int main() {
 
 		delete[] buffer2;
 		buffer2 = NULL;
-		delete[] buffer3;
-		buffer3 = NULL;
+		if (intra_prediction_flag == 1) {
+			delete[] buffer3;
+			buffer3 = NULL;
+		}
 		delete[] buffer4;
 		buffer4 = NULL;
 		delete[] buffer5;
@@ -3085,10 +3179,22 @@ int main() {
 		U_buffer4 = NULL;
 		delete[] V_buffer4;
 		V_buffer4 = NULL;
+		delete[] U_buffer5;
+		U_buffer5 = NULL;
+		delete[] V_buffer5;
+		V_buffer5 = NULL;
 		delete[] encode_buffer1;
 		encode_buffer1 = NULL;
-		/*delete[] IncludeMPM_buffer;
-		IncludeMPM_buffer = NULL;*/
+		delete[] encode_U_buffer1;
+		encode_U_buffer1 = NULL;
+		delete[] encode_V_buffer1;
+		encode_V_buffer1 = NULL;
+		delete[] MPM_buffer;
+		MPM_buffer = NULL;
+		delete[] X_buf;
+		X_buf = NULL;
+		delete[] Y_buf;
+		Y_buf = NULL;
 	}
 	delete[] Reconstructed_buf;
 	Reconstructed_buf = NULL;
@@ -3098,5 +3204,9 @@ int main() {
 	Reconstructed_V_buf = NULL;
 	delete[] encode_buffer2;
 	encode_buffer2 = NULL;
+	delete[] encode_U_buffer2;
+	encode_U_buffer2 = NULL;
+	delete[] encode_V_buffer2;
+	encode_V_buffer2 = NULL;
 	return 0;
 }
