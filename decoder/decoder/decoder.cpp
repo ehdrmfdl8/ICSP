@@ -1806,6 +1806,7 @@ int main() {
 		//}
 		buffer0 = entropy_decoding(decode_buffer, fileLength, MPM_buffer, X_buf, Y_buf, &QP_DC, &QP_AC, &pixel_dpcm_flag, &intra_period, &intra_prediction_flag, &Frame);
 		delete[] decode_buffer;
+		fclose(picture);
 	}
 	
 	for (int f = 0; f < Frame; f++)

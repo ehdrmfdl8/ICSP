@@ -4,7 +4,8 @@
 #include <algorithm>
 #include <cstring>
 #include <math.h>
-
+#include <string>
+#include <iostream>
 #define Width 352
 #define Height 288
 #define PI 3.142857
@@ -50,6 +51,9 @@ int* Motion_Estimation(int* , unsigned char* , unsigned char* , unsigned char*, 
 //역 인터
 unsigned char* Reverse_Motion_Estimation(int* , unsigned char* , unsigned char* , unsigned char* ,int);
 
+//DCT&양자화
+int* DCT_QUANTI(int*, int);
+int* IDCT_DEQUANTI(int*, int);
 //양자화
 int** Quantization(double**);
 double** DeQuantization(int matrix[8][8]);
@@ -64,8 +68,7 @@ int* Reordering_entorpy_intra(int*, int*, unsigned char*, int, int);
 int* Reordering_entorpy_inter(int*, int*, unsigned char*, unsigned char*, int);
 int** ZigZag_Scan(int matrix[8][8]);
 
-int* DCT_QUANTI(int*, int);
-int* IDCT_DEQUANTI(int*, int);
+
 //엔트로피
 int* entropy_encoding_intra(int**, int*, int*, int, int, int);
 int* entropy_encoding_inter(int**, int*, int*, int, int, int);
@@ -416,7 +419,6 @@ int** Quantization(double** matrix) {
 	//for (i = 0; i < 8; i++) {
 	//	for (j = 0; j < 8; j++) {
 	//		printf("%f\t", Quantizer[i][j]);
-
 	//	}
 	//	printf("\n");
 	//}
@@ -442,6 +444,7 @@ double** DeQuantization(int matrix[8][8]) {
 	}
 	return DeQuantizer;
 }
+
 double** FDCT(double matrix[8][8]) {
 	double** DCT4 = new double* [8];
 	for (int i = 0; i < 8; i++)
@@ -977,6 +980,15 @@ int* pixel_DPCM(int* buffer, int f, int sel) {
 				}
 			}
 			break;
+		case 6:
+			for (int i = 0; i < 8; i++)
+			{
+				for (int j = 0; j < 8; j++)
+				{
+					new_buffer[_Width * (i + 8 * n) + j + 8 * m] = matrix[i][j];
+				}
+			}
+			break;
 		default:
 			break;
 		}
@@ -1161,11 +1173,9 @@ int* Intra_Prediction(int* buffer, int f, unsigned char* MPM_buffer) {
 
 		}
 
-
 		MODE0_matrix = Intra_Mode0(matrix, k, V_reference_buffer, H_reference_buffer);
 		MODE1_matrix = Intra_Mode1(matrix, k, V_reference_buffer, H_reference_buffer);
 		MODE2_matrix = Intra_Mode2(matrix, k, V_reference_buffer, H_reference_buffer);
-
 
 		//------------------DPCM 선택 하는 코드------------------------------
 		int sum0 = 0;
@@ -1180,7 +1190,6 @@ int* Intra_Prediction(int* buffer, int f, unsigned char* MPM_buffer) {
 				sum2 += abs(MODE2_matrix[i][j]);
 			}
 		}
-
 		//----------------- select Intra MODE-------------------------------
 		if (min({ sum0, sum1, sum2 }) == sum0) {
 			for (int i = 0; i < 8; i++)
@@ -1929,7 +1938,8 @@ int* Motion_Estimation(int* cur_buffer, unsigned char* rec_buffer, unsigned char
 					{
 						for (int j = 0; j < 8; j++)
 						{
-							if (((y - 7) + i + 8 * n) >= 0 && (j + 8 * m + (x - 7)) >= 0 && ((y - 7) + i + 8 * n) < _Height && (j + 8 * m + (x - 7)) < _Width) {
+							if (((y - 7) + i + 8 * n) >= 0 && (j + 8 * m + (x - 7)) >= 0 && 
+								((y - 7) + i + 8 * n) < _Height && (j + 8 * m + (x - 7)) < _Width) {
 								rec_matrix[i][j] = rec_buffer[_Width * ((y - 7) + i + 8 * n) + j + 8 * m + (x - 7)];
 								SAD_matrix[i][j] = cur_matrix[i][j] - rec_matrix[i][j];
 
@@ -1970,7 +1980,8 @@ int* Motion_Estimation(int* cur_buffer, unsigned char* rec_buffer, unsigned char
 			{
 				for (int j = 0; j < 8; j++)
 				{
-					rec_matrix[i][j] = rec_buffer[_Width * (((Y_buf[44 * 2 * n + 2 * m] / 2) - 3) + i + 8 * n) + j + 8 * m + ((X_buf[44 * 2 * n + 2 * m] / 2) - 3)];
+					rec_matrix[i][j] = rec_buffer[_Width * (((Y_buf[44 * 2 * n + 2 * m] / 2) - 3) + i + 8 * n)
+						+ j + 8 * m + ((X_buf[44 * 2 * n + 2 * m] / 2) - 3)];
 					new_buffer[_Width * (i + 8 * n) + j + 8 * m] = cur_matrix[i][j] - rec_matrix[i][j];
 				}
 			}
@@ -2947,6 +2958,17 @@ int main(int argc, char *argv[]) {
 	intra_period = atoi(argv[4]);
 	pixel_dpcm_flag = atoi(argv[5]);
 	intra_prediction_flag = atoi(argv[6]);
+	string readfile = argv[7];
+	string filename = "encode_";
+	string recon_file = "reconstruct_";
+	filename += to_string(QP_DC);
+	filename += '_'+ to_string(QP_AC);
+	filename += '_' + to_string(intra_period);
+	filename += '_' + to_string(pixel_dpcm_flag);
+	filename += '_' + to_string(intra_prediction_flag);
+	filename += '_' + readfile;
+	recon_file += filename;
+	cout << filename << endl;
 	//int Frame = 0;
 	//err = fopen_s(&picture, "football_cif(352X288)_90f.yuv", "rb");
 	//if (err == 0) {
@@ -2954,6 +2976,9 @@ int main(int argc, char *argv[]) {
 	//	int fileLength = ftell(picture);
 	//	Frame = fileLength / Size;
 	//}
+	if (intra_period == 0) {
+		intra_period = Frame;
+	}
 	unsigned char* Reconstructed_buf = new unsigned char[YSize];
 	unsigned char* Reconstructed_U_buf = new unsigned char[USize];
 	unsigned char* Reconstructed_V_buf = new unsigned char[VSize];
@@ -2965,7 +2990,7 @@ int main(int argc, char *argv[]) {
 	
 	encode_header_buffer = encoding_header(header_buffer, QP_DC, QP_AC, pixel_dpcm_flag, intra_period, intra_prediction_flag, Frame);
 
-	err2 = fopen_s(&picture2, "encode_Y_football_cif(352X288)_90f.yuv", "a+b"); // wb대신에 a+b를 사용하는 이유는 파일을 이어쓰기 때문이다.
+	err2 = fopen_s(&picture2, filename.c_str(), "a+b"); // wb대신에 a+b를 사용하는 이유는 파일을 이어쓰기 때문이다.
 	if (err2 == 0) {
 		fseek(picture2, 0, SEEK_SET);
 		fwrite(encode_header_buffer, 4, 3, picture2);
@@ -3009,7 +3034,7 @@ int main(int argc, char *argv[]) {
 		V_buffer_stack = &d;
 		const int sel_Y = 0;
 		const int sel_UV = 1;
-		err = fopen_s(&picture, "football_cif(352X288)_90f.yuv", "rb");
+		err = fopen_s(&picture, argv[7], "rb");
 		if (err == 0) {
 
 			fseek(picture, Size * f, SEEK_SET); //2번째는 이동할 거리, 3번째는 이동방식 -> 파일의 처음 위치를 기준으로 이동한다.
@@ -3109,13 +3134,13 @@ int main(int argc, char *argv[]) {
 		}
 
 
-		err2 = fopen_s(&picture2, "encode_Y_football_cif(352X288)_90f.yuv", "a+b"); // wb대신에 a+b를 사용하는 이유는 파일을 이어쓰기 때문이다.
+		err2 = fopen_s(&picture2, filename.c_str(), "a+b"); // wb대신에 a+b를 사용하는 이유는 파일을 이어쓰기 때문이다.
 		if (err2 == 0) {
 			fseek(picture2, *buffer_stack * f+3, SEEK_SET);
 			fwrite(encode_buffer2, 4, *buffer_stack, picture2);
 			fclose(picture2);
 		}
-		err2 = fopen_s(&picture2, "encode_Y_football_cif(352X288)_90f.yuv", "a+b"); // wb대신에 a+b를 사용하는 이유는 파일을 이어쓰기 때문이다.
+		err2 = fopen_s(&picture2, filename.c_str(), "a+b"); // wb대신에 a+b를 사용하는 이유는 파일을 이어쓰기 때문이다.
 		if (err2 == 0) {
 			fseek(picture2, *U_buffer_stack * f+3, SEEK_SET);
 			fwrite(encode_U_buffer2, 4, *U_buffer_stack, picture2);
@@ -3125,26 +3150,26 @@ int main(int argc, char *argv[]) {
 			}*/
 			fclose(picture2);
 		}
-		err2 = fopen_s(&picture2, "encode_Y_football_cif(352X288)_90f.yuv", "a+b"); // wb대신에 a+b를 사용하는 이유는 파일을 이어쓰기 때문이다.
+		err2 = fopen_s(&picture2, filename.c_str(), "a+b"); // wb대신에 a+b를 사용하는 이유는 파일을 이어쓰기 때문이다.
 		if (err2 == 0) {
 			fseek(picture2, *V_buffer_stack * f+3, SEEK_SET);
 			fwrite(encode_V_buffer2, 4, *V_buffer_stack, picture2);
 			fclose(picture2);
 		}
 
-		err3 = fopen_s(&picture3, "reconstruct_Y_football_cif(352X288)_90f.yuv", "a+b"); // wb대신에 a+b를 사용하는 이유는 파일을 이어쓰기 때문이다.
+		err3 = fopen_s(&picture3, recon_file.c_str(), "a+b"); // wb대신에 a+b를 사용하는 이유는 파일을 이어쓰기 때문이다.
 		if (err3 == 0) {
 			fseek(picture3, YSize * f, SEEK_SET);
 			fwrite(Reconstructed_buf, 1, YSize, picture3);
 			fclose(picture3);
 		}
-		err3 = fopen_s(&picture3, "reconstruct_Y_football_cif(352X288)_90f.yuv", "a+b"); // wb대신에 a+b를 사용하는 이유는 파일을 이어쓰기 때문이다.
+		err3 = fopen_s(&picture3, recon_file.c_str(), "a+b"); // wb대신에 a+b를 사용하는 이유는 파일을 이어쓰기 때문이다.
 		if (err3 == 0) {
 			fseek(picture3, USize * f, SEEK_SET);
 			fwrite(Reconstructed_U_buf, 1, USize, picture3);
 			fclose(picture3);
 		}
-		err3 = fopen_s(&picture3, "reconstruct_Y_football_cif(352X288)_90f.yuv", "a+b"); // wb대신에 a+b를 사용하는 이유는 파일을 이어쓰기 때문이다.
+		err3 = fopen_s(&picture3, recon_file.c_str(), "a+b"); // wb대신에 a+b를 사용하는 이유는 파일을 이어쓰기 때문이다.
 		if (err3 == 0) {
 			fseek(picture3, VSize * f, SEEK_SET);
 			fwrite(Reconstructed_V_buf, 1, VSize, picture3);
