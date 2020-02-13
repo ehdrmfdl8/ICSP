@@ -817,8 +817,11 @@ int** DPCM_Mode1(int matrix[8][8], int k, int* V_ref, int* H_ref, int sel) {
 					if (j > 0) {
 						MODE1_matrix[i][j] = matrix[i][j] - matrix[i][j - 1];
 					}
-					else {//i==0&&j==0 인경우
+					else if(j == 0) {//i==0&&j==0 인경우
 						MODE1_matrix[i][j] = matrix[i][j] - V_ref[8 * ((k % _macro_Wsize) - 1) + i];
+					}
+					else {
+						printf("DPCM Mode 1 error");
 					}
 				}
 				else {
@@ -873,8 +876,11 @@ int** DPCM_Mode2(int matrix[8][8], int k, int* V_ref, int* H_ref, int sel) {
 					if (i > 0) {
 						MODE2_matrix[i][j] = matrix[i][j] - matrix[i - 1][j];
 					}
-					else {//i==0&&j==0 인경우
+					else if(i == 0) {//i==0&&j==0 인경우
 						MODE2_matrix[i][j] = matrix[i][j] - H_ref[8 * (k % _macro_Wsize) + j];
+					}
+					else {
+						printf("DPCM Mode 2 error");
 					}
 				}
 				else {
@@ -1386,7 +1392,8 @@ unsigned char* Reverse_Intra_Prediction(int* buffer, int f, unsigned char* MPM_b
 	{
 		MODE2_matrix[i] = new int[8];
 	}
-
+	memset(V_reference_buffer, 0, Width);
+	memset(H_reference_buffer, 0, Width);
 	int n = -1;
 	int m = 0;
 	for (int k = 0; k < MPM_BUF_Size; k++)
@@ -1709,7 +1716,7 @@ int** Reverse_DPCM_Mode2(int matrix[8][8], int k, int* V_ref, int* H_ref, int se
 						matrix[i][j] = matrix[i][j] + matrix[i - 1][j];
 					}
 					else {//i==0&&j==0 인경우
-						matrix[i][j] = matrix[i][j] + H_ref[8 * (k % _macro_Wsize) + j];
+						matrix[i][j] = matrix[i][j] + H_ref[8 * (k % _macro_Wsize)];
 					}
 				}
 				else {
@@ -1758,7 +1765,8 @@ int* Reverse_pixel_DPCM(int* buffer, int f, int sel) {
 	int* V_reference_buffer = new int[_Width];
 	int* H_reference_buffer = new int[_Width];
 	int matrix[8][8] = { 0, };
-
+	memset(V_reference_buffer, 0, _Width);
+	memset(H_reference_buffer, 0, _Width);
 	int** MODE0_matrix = new int* [8];
 	for (int i = 0; i < 8; i++)
 	{
@@ -1860,6 +1868,15 @@ int* Reverse_pixel_DPCM(int* buffer, int f, int sel) {
 					}
 				}
 				break;
+		case 6: 
+			for (int i = 0; i < 8; i++)
+			{
+				for (int j = 0; j < 8; j++)
+				{
+					new_buffer[_Width * (i + 8 * n) + j + 8 * m] = matrix[i][j];
+				}
+			}
+			break;
 		default:
 			break;
 		}
@@ -3065,9 +3082,9 @@ int main(int argc, char *argv[]) {
 				U_buffer3 = DCT_QUANTI(U_buffer2, sel_UV);
 				V_buffer3 = DCT_QUANTI(V_buffer2, sel_UV);
 
-				encode_buffer1 = DC_DPCM(buffer5, sel_Y);
-				encode_U_buffer1 = DC_DPCM(U_buffer3, sel_UV);
-				encode_V_buffer1 = DC_DPCM(V_buffer3, sel_UV);
+				encode_buffer1 = DC_DPCM(buffer4, sel_Y);
+				encode_U_buffer1 = DC_DPCM(U_buffer2, sel_UV);
+				encode_V_buffer1 = DC_DPCM(V_buffer2, sel_UV);
 
 				encode_buffer2 = Reordering_entorpy_intra(encode_buffer1, buffer_stack, MPM_buffer, sel_Y, intra_prediction_flag);
 				encode_U_buffer2 = Reordering_entorpy_intra(encode_U_buffer1, U_buffer_stack, MPM_buffer, sel_UV, intra_prediction_flag);
@@ -3081,9 +3098,9 @@ int main(int argc, char *argv[]) {
 				U_buffer4 = IDCT_DEQUANTI(U_buffer3, sel_UV);
 				V_buffer4 = IDCT_DEQUANTI(V_buffer3, sel_UV);
 
-				buffer7 = Reverse_pixel_DPCM(buffer6, f, sel_Y);
-				U_buffer5 = Reverse_pixel_DPCM(U_buffer4, f, sel_UV);
-				V_buffer5 = Reverse_pixel_DPCM(V_buffer4, f, sel_UV);
+				buffer7 = Reverse_pixel_DPCM(buffer4, f, sel_Y);
+				U_buffer5 = Reverse_pixel_DPCM(U_buffer2, f, sel_UV);
+				V_buffer5 = Reverse_pixel_DPCM(V_buffer2, f, sel_UV);
 				if (intra_prediction_flag == 1) {
 					Reconstructed_buf = Reverse_Intra_Prediction(buffer7, f, MPM_buffer);
 				}

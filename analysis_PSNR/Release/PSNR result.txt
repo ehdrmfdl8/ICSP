@@ -1,0 +1,1 @@
+reconstruct_encode_1_1_0_0_0_foreman_cif(352X288)_300f.yuv  PSNR  =  46.517429	 compression rate = 1.771247

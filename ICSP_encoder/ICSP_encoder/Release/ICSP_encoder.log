@@ -7,14 +7,28 @@ C:\Users\ICSP\source\repos\ICSP\ICSP_encoder\ICSP_encoder\ICSP_encoder.cpp(1071,
 C:\Users\ICSP\source\repos\ICSP\ICSP_encoder\ICSP_encoder\ICSP_encoder.cpp(1275,39): warning C4244: '=': 'double'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
 C:\Users\ICSP\source\repos\ICSP\ICSP_encoder\ICSP_encoder\ICSP_encoder.cpp(1288,39): warning C4244: '=': 'double'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
 C:\Users\ICSP\source\repos\ICSP\ICSP_encoder\ICSP_encoder\ICSP_encoder.cpp(1302,39): warning C4244: '=': 'double'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-C:\Users\ICSP\source\repos\ICSP\ICSP_encoder\ICSP_encoder\ICSP_encoder.cpp(2952,8): warning C4101: 'picture5' :참조되지 않은 지역 변수입니다.
-C:\Users\ICSP\source\repos\ICSP\ICSP_encoder\ICSP_encoder\ICSP_encoder.cpp(2951,8): warning C4101: 'picture4' :참조되지 않은 지역 변수입니다.
-C:\Users\ICSP\source\repos\ICSP\ICSP_encoder\ICSP_encoder\ICSP_encoder.cpp(2947,33): warning C4101: 'err5' :참조되지 않은 지역 변수입니다.
-C:\Users\ICSP\source\repos\ICSP\ICSP_encoder\ICSP_encoder\ICSP_encoder.cpp(2947,27): warning C4101: 'err4' :참조되지 않은 지역 변수입니다.
+C:\Users\ICSP\source\repos\ICSP\ICSP_encoder\ICSP_encoder\ICSP_encoder.cpp(2963,8): warning C4101: 'picture5' :참조되지 않은 지역 변수입니다.
+C:\Users\ICSP\source\repos\ICSP\ICSP_encoder\ICSP_encoder\ICSP_encoder.cpp(2962,8): warning C4101: 'picture4' :참조되지 않은 지역 변수입니다.
+C:\Users\ICSP\source\repos\ICSP\ICSP_encoder\ICSP_encoder\ICSP_encoder.cpp(2958,33): warning C4101: 'err5' :참조되지 않은 지역 변수입니다.
+C:\Users\ICSP\source\repos\ICSP\ICSP_encoder\ICSP_encoder\ICSP_encoder.cpp(2958,27): warning C4101: 'err4' :참조되지 않은 지역 변수입니다.
   코드를 생성하고 있습니다.
-  13 of 164 functions ( 7.9%) were compiled, the rest were copied from previous compilation.
-    0 functions were new in current compilation
-    9 functions had inline decision re-evaluated but remain unchanged
+  Previous IPDB not found, fall back to full compilation.
+  All 164 functions were compiled because no usable IPDB/IOBJ from previous compilation was found.
   코드를 생성했습니다.
-ICSP_encoder.obj : warning LNK4020: 'c:\users\icsp\source\repos\icsp\icsp_encoder\icsp_encoder\release\vc142.pdb'의 형식 레코드가 손상되었습니다. 디버거에서 일부 기호와 형식에 액세스할 수 없습니다.
   ICSP_encoder.vcxproj -> C:\Users\ICSP\source\repos\ICSP\ICSP_encoder\Release\ICSP_encoder.exe
+C:\Users\ICSP\source\repos\ICSP\ICSP_encoder\ICSP_encoder\ICSP_encoder.cpp(273): warning C6031: 반환 값이 무시되었습니다. 'realloc'.
+C:\Users\ICSP\source\repos\ICSP\ICSP_encoder\ICSP_encoder\ICSP_encoder.cpp(354): warning C6031: 반환 값이 무시되었습니다. 'realloc'.
+C:\Users\ICSP\source\repos\ICSP\ICSP_encoder\ICSP_encoder\ICSP_encoder.cpp(441): warning C26451: 산술 오버플로: 4 바이트 값의 '*' 연산자를 사용한 다음 결과를 8 바이트 값에 캐스트합니다. 오버플로를 방지하려면 '*' 연산자를 호출하기 전에 더 광범위한 형식에 값을 캐스트합니다(io.2).
+C:\Users\ICSP\source\repos\ICSP\ICSP_encoder\ICSP_encoder\ICSP_encoder.cpp(438): warning C26451: 산술 오버플로: 4 바이트 값의 '*' 연산자를 사용한 다음 결과를 8 바이트 값에 캐스트합니다. 오버플로를 방지하려면 '*' 연산자를 호출하기 전에 더 광범위한 형식에 값을 캐스트합니다(io.2).
+C:\Users\ICSP\source\repos\ICSP\ICSP_encoder\ICSP_encoder\ICSP_encoder.cpp(2489): warning C6031: 반환 값이 무시되었습니다. 'realloc'.
+C:\Users\ICSP\source\repos\ICSP\ICSP_encoder\ICSP_encoder\ICSP_encoder.cpp(2910): warning C6031: 반환 값이 무시되었습니다. 'realloc'.
+C:\Users\ICSP\source\repos\ICSP\ICSP_encoder\ICSP_encoder\ICSP_encoder.cpp(3087): warning C6031: 반환 값이 무시되었습니다. 'realloc'.
+C:\Users\ICSP\source\repos\ICSP\ICSP_encoder\ICSP_encoder\ICSP_encoder.cpp(3088): warning C6031: 반환 값이 무시되었습니다. 'realloc'.
+C:\Users\ICSP\source\repos\ICSP\ICSP_encoder\ICSP_encoder\ICSP_encoder.cpp(3089): warning C6031: 반환 값이 무시되었습니다. 'realloc'.
+C:\Users\ICSP\source\repos\ICSP\ICSP_encoder\ICSP_encoder\ICSP_encoder.cpp(3130): warning C6031: 반환 값이 무시되었습니다. 'realloc'.
+C:\Users\ICSP\source\repos\ICSP\ICSP_encoder\ICSP_encoder\ICSP_encoder.cpp(3131): warning C6031: 반환 값이 무시되었습니다. 'realloc'.
+C:\Users\ICSP\source\repos\ICSP\ICSP_encoder\ICSP_encoder\ICSP_encoder.cpp(3132): warning C6031: 반환 값이 무시되었습니다. 'realloc'.
+C:\Users\ICSP\source\repos\ICSP\ICSP_encoder\ICSP_encoder\ICSP_encoder.cpp(3130): warning C6280: 'encode_buffer2'이(가) 'new []'을(를) 사용해 할당되었지만 'realloc'(으)로 삭제되었습니다.
+C:\Users\ICSP\source\repos\ICSP\ICSP_encoder\ICSP_encoder\ICSP_encoder.cpp(3131): warning C6280: 'encode_U_buffer2'이(가) 'new []'을(를) 사용해 할당되었지만 'realloc'(으)로 삭제되었습니다.
+C:\Users\ICSP\source\repos\ICSP\ICSP_encoder\ICSP_encoder\ICSP_encoder.cpp(3132): warning C6280: 'encode_V_buffer2'이(가) 'new []'을(를) 사용해 할당되었지만 'realloc'(으)로 삭제되었습니다.
+C:\Users\ICSP\source\repos\ICSP\ICSP_encoder\ICSP_encoder\ICSP_encoder.cpp(3186): warning C6001: 초기화되지 않은 메모리 '*Reconstructed_V_buf'을(를) 사용하고 있습니다.

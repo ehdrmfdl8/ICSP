@@ -508,7 +508,6 @@ int* entropy_decoding(unsigned int* decode_buffer ,int fileLength, unsigned char
 				n = 0;
 				block_X++;
 				
-				
 				if (block_Y == (_macro_Hsize - 1) && block_X == _macro_Wsize) {
 					block_X = 0;
 					block_Y = 0;	
